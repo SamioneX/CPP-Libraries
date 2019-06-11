@@ -60,7 +60,7 @@ class my::vector {
     ~vector();
     vector& operator=(const vector& vec);
     vector& operator=(std::initializer_list<T> l);
-    void assign(size_t n, T val);
+    void assign(size_t n, const T& val);
     template<class InputIterator>
     void assign(InputIterator begin, InputIterator end);
     T& at(size_t val) const;
@@ -76,11 +76,11 @@ class my::vector {
     template<class InputIterator>
     void insert(iterator it, InputIterator begin, InputIterator end);
     void insert(iterator it, std::initializer_list<T> l);
-    iterator emplace(iterator it, T val) {return insert(it, val);}
-    void emplace_back(T val) {push_back(val);}
+    iterator emplace(iterator it, const T& val) {return insert(it, val);}
+    void emplace_back(const T& val) {push_back(val);}
     void erase(iterator it);
     void erase(iterator begin, iterator end);
-    void eraseAll(T val);
+    void eraseAll(const T& val);
     bool empty() const {return inUse == 0;}
     size_t size() const {return inUse;}
     size_t capacity() const {return allocated;}
@@ -89,8 +89,8 @@ class my::vector {
     void shrink_to_fit();
     void swap(vector& vec);
     void sort() {quickSort(0, size()-1);}
-    iterator find(iterator begin, iterator end, T& val) const;
-    iterator find_s(iterator begin, iterator end, T& val) const;
+    iterator find(iterator begin, iterator end, const T& val) const;
+    iterator find_s(iterator begin, iterator end, const T& val) const;
     iterator begin() const {return iterator(0, this);}
     iterator end() const {return iterator(inUse, this);}
     const_iterator cbegin() const {return const_iterator(0, this);}
@@ -166,7 +166,7 @@ my::vector<T>& my::vector<T>::operator= (std::initializer_list<T> l) {
     return *this;
 }
 template <class T>
-void my::vector<T>::assign(size_t n, T val) {
+void my::vector<T>::assign(size_t n, const T& val) {
     clear();
     inUse = allocated = n;
     arr = (T*)malloc(sizeof(T)*allocated);
@@ -347,7 +347,7 @@ void my::vector<T>::erase(iterator begin, iterator end) {
     this->resize(inUse-n);
 }
 template <class T>
-void my::vector<T>::eraseAll(T val) {
+void my::vector<T>::eraseAll(const T& val) {
     if (inUse == 0)
         return;
     int i = 0;
@@ -397,7 +397,7 @@ void my::vector<T>::quickSort(size_t l, size_t h) {
     quickSort(m + 1, h);
 }
 template <class T> class my::vector<T>::
-vector_iterator<T> my::vector<T>::find(iterator begin, iterator end, T& val) const {
+vector_iterator<T> my::vector<T>::find(iterator begin, iterator end, const T& val) const {
     int start = begin - this->begin(), stop = end - this->begin();
     for (; start < stop; start++) {
         if (arr[start] == val)
@@ -407,7 +407,7 @@ vector_iterator<T> my::vector<T>::find(iterator begin, iterator end, T& val) con
     return it;
 }
 template <class T> class my::vector<T>::
-vector_iterator<T> my::vector<T>::find_s(iterator begin, iterator end, T& val) const {
+vector_iterator<T> my::vector<T>::find_s(iterator begin, iterator end, const T& val) const {
     int mid, low(begin - this->begin()), high((end - this->begin())- 1);
 
     while (high >= low) {
