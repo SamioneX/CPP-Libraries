@@ -103,8 +103,8 @@ class my::string {
     int compare (size_t pos, size_t len, const char* s, size_t n) const;
     char& at(size_t i) const;
     char& operator[](size_t i) const {return this->at(i);}
-    char& front() const {return str[0];}
-    char& back() const {return str[inUse-1];}
+    char& front() const;
+    char& back() const;
     const char* data() const {return str;}
     const char* c_str() const {return str;}
     void push_back(const char& val);
@@ -282,6 +282,26 @@ char& my::string::at(size_t i) const {
         _Exit (EXIT_FAILURE);
     }
     return str[i];
+}
+char& my::string::front() const {
+    try {
+        if (inUse == 0) throw "Error in my::string::range_check in call to my::string::front()\n String is empty.\n;
+    }
+    catch (const char* s) {
+        std::cout << s;
+        _Exit (EXIT_FAILURE);
+    }
+    return str[0];
+}
+char& my::string::back() const {
+    try {
+        if (inUse == 0) throw "Error in my::string::range_check in call to my::string::back()\n String is empty.\n;
+    }
+    catch (const char* s) {
+        std::cout << s;
+        _Exit (EXIT_FAILURE);
+    }
+    return str[inUse-1];
 }
 void my::string::growArray(size_t n) {
     char* temp = str;
