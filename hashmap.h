@@ -130,7 +130,7 @@ class my::MapClass {
         if (arr[index] == NULL) {
             arr[index] = new HashNode<K, V>(p);
             ++count;
-            return my::pair<pair<K,V>*, bool>(&(arr[index]->data), true);
+            return pair<pair<K,V>*, bool>(&(arr[index]->data), true);
         }
         else {
             HashNode<K, V>* temp = arr[index], *prev;
@@ -142,7 +142,7 @@ class my::MapClass {
             }
             prev->next = new HashNode<K, V>(p);
             ++count;
-            return my::pair<pair<K,V>*, bool>(&(prev->next->data), true);
+            return pair<pair<K,V>*, bool>(&(prev->next->data), true);
         }
     }
     template <class InputIterator>
