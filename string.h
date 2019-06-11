@@ -285,7 +285,7 @@ char& my::string::at(size_t i) const {
 }
 char& my::string::front() const {
     try {
-        if (inUse == 0) throw "Error in my::string::range_check in call to my::string::front()\n String is empty.\n;
+        if (inUse == 0) throw "Error in my::string::range_check in call to my::string::front()\n String is empty.\n";
     }
     catch (const char* s) {
         std::cout << s;
@@ -295,7 +295,7 @@ char& my::string::front() const {
 }
 char& my::string::back() const {
     try {
-        if (inUse == 0) throw "Error in my::string::range_check in call to my::string::back()\n String is empty.\n;
+        if (inUse == 0) throw "Error in my::string::range_check in call to my::string::back()\n String is empty.\n";
     }
     catch (const char* s) {
         std::cout << s;
