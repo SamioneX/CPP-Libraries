@@ -45,12 +45,12 @@ class my::string {
         string_iterator& operator+=(int v) {ptr += v; return *this;}
         string_iterator& operator++() {ptr++; return *this;}
         string_iterator operator++(int) {string_iterator it = *this; ++*this; return it;}
-        string_iterator operator+(int v) {string_iterator it(ptr+v, s); return it;}
+        string_iterator operator+(int v) {return string_iterator(ptr+v, s);}
         friend string_iterator operator+(int v, string_iterator& iter)
-        {string_iterator it((iter.ptr)+v, iter.s); return it;}
+        {return string_iterator((iter.ptr)+v, iter.s);}
         string_iterator& operator-=(int v) {ptr -= v; return *this;}
         string_iterator& operator--() {ptr--; return *this;}
-        string_iterator operator-(int v) {string_iterator it(ptr-v, s); return it;}
+        string_iterator operator-(int v) {return string_iterator(ptr-v, s);}
         string_iterator operator--(int) {string_iterator it = *this; --*this; return it;}
         difference_type operator-(const string_iterator& it) {return ptr - it.ptr;}
         bool operator<(const string_iterator& it) {return ptr < it.ptr;}
