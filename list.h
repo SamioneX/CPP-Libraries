@@ -29,17 +29,17 @@ class my::list {
         public:
             typedef U value_type;
             typedef U& reference;
-            typedef V pointer;
+            typedef U* pointer;
             typedef std::bidirectional_iterator_tag iterator_category;
             typedef void difference_type;
-            list_iterator(pointer p): hd(p) {}
+            list_iterator(V p): hd(p) {}
             list_iterator& operator=(const list_iterator& it) {hd = it.hd; return *this;} 
             bool operator==(const list_iterator& it) {return hd == it.hd;}
             bool operator!=(const list_iterator& it) {return hd != it.hd;}
             reference operator*() {return hd->data;}
-            U* operator->() { return &(hd->data);}
+            pointer operator->() { return &(hd->data);}
         protected:
-            pointer hd;
+            V hd;
     };
     private:
         node<T> *head;
