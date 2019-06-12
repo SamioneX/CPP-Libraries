@@ -64,7 +64,6 @@ template <> size_t my::hash::operator()<std::string> (const std::string s, size_
         hash_value = (hash_value + (c - ' ' + 1) * p_pow) % size;
         p_pow = (p_pow * p) % size;
     }
-    std::cout << "hash value is " << hash_value << "\n";
     return hash_value;
 }
 template <> size_t my::hash::operator()<const char*>(const char* s, size_t size) {
