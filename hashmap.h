@@ -84,6 +84,7 @@ struct my::pair {
     T first;
     U second;
     pair(T val1 = T(), U val2 = U()): first(val1), second(val2) {}
+    pair(const pair& p): first(p.first), second(p.second) {}
     pair(std::initializer_list<void*> l) {
         auto it = l.begin();
         first = *((T*)(*it));
