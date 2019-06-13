@@ -18,8 +18,7 @@ namespace my{
     template <> size_t hash::operator() (float, size_t);
     template <> size_t hash::operator() (char, size_t);
     template<class T> struct equals;
-    template<class T, class U> struct pair;
-    template<class K, class V> struct HashNode;
+    template <class T> struct HashNode;
     template <class K, class V, class C = equals<K>, class H = hash> class map;
 }
 template<class T> struct my::equals {
@@ -32,15 +31,13 @@ template <class T> size_t my::hash::operator() (T t, size_t size) {
     return (size_t)t % size;
 }
 template <> size_t my::hash::operator() (double d, size_t size) {
-    return operator()((long double)d, size);
+    d *= 100; return (size_t)d % size;
 }
 template <> size_t my::hash::operator() (long double d, size_t size) {
-    d = (d < 0)? -d: d;
-    d *= 100;
-    return (size_t)d % size;
+    d *= 100; return (size_t)d % size;
 }
 template <> size_t my::hash::operator() (float f, size_t size) {
-    return operator()((long double)f, size);
+    f *= 100; return (size_t)f % size;
 }
 template <> size_t my::hash::operator() (std::string s, size_t size) {
     const size_t p = 31;
@@ -52,7 +49,7 @@ template <> size_t my::hash::operator() (std::string s, size_t size) {
     }
     return hash_value;
 }
-template <> size_t my::hash::operator()<const char*>(const char* s, size_t size) {
+template <> size_t my::hash::operator()(const char* s, size_t size) {
     const size_t p = 31;
     size_t hash_value = 0;
     unsigned long long p_pow = 1;
@@ -62,77 +59,100 @@ template <> size_t my::hash::operator()<const char*>(const char* s, size_t size)
     }
     return hash_value;
 }
-template <> size_t my::hash::operator()<char> (char s, size_t size) {
+template <> size_t my::hash::operator()(char s, size_t size) {
     return (size_t)(s - ' ') % size;
 }
-template<class T, class U>
-struct my::pair {
-    T first;
-    U second;
-    pair(T val1 = T(), U val2 = U()): first(val1), second(val2) {}
-    pair(const pair& p): first(p.first), second(p.second) {}
-    pair(std::initializer_list<void*> l) {
-        auto it = l.begin();
-        first = *((T*)(*it));
-        it++;
-        second = *((U*)(*it));
-    }
-    pair& operator=(const pair& p) {
-        first = p.first; second = p.second; return *this;
-    }
-};
-template<class K, class V>
+template <class T>
 struct my::HashNode {
-    pair<K, V> data;
+    T data;
     HashNode* next;
-    HashNode(pair<K, V> p): data(p), next(NULL) {}
+    HashNode(T t): data(t), next(NULL) {}
 };
 template <class K, class V, class C, class H>
 class my::map {
-    private:
-    HashNode<K,V>** arr;
-    size_t count;
-    size_t size_;
-    H hash;
-    C comp;
+    template <class T> class map_iterator {
+        public:
+        typedef T value_type;
+        typedef T& reference;
+        typedef T* pointer;
+        typedef std::forward_iterator_tag iterator_category;
+        typedef void difference_type;
+        map_iterator(map* a = NULL, size_t i = 0, HashNode<value_type>* h = NULL) {m = a; index = i; p = h;}
+        map_iterator& operator=(const map_iterator& it) {m = it.m; index = it.index; p = it.p;}
+        bool operator==(const map_iterator& it) {return p == it.p;}
+        bool operator!=(const map_iterator& it) {return p != it.p;}
+        map_iterator& operator++() {
+            if (p->next != NULL)
+                p = p->next;
+            else {
+                ++index;
+                while (index < m->size_ && m->arr[index] == NULL) ++index;
+                p = (index == m->size_)? NULL: m->arr[index];
+            }
+            return *this;
+        }
+        map_iterator operator++(int) {map_iterator it = *this; ++*this; return it;}
+        reference operator*() {return p->data;}
+        pointer operator->() {return &(p->data);}
 
+        private:
+        map* m;
+        size_t index;
+        HashNode<value_type>* p;
+    };
+    void copy(const map& m) {
+        for (size_t i = 0; i < m.size_; ++i) {
+            HashNode<value_type>* temp = m.arr[i];
+            while (temp != NULL) {
+                insert(temp->data);
+                temp = temp->next;
+            }
+        }
+    }
     public:
+    typedef std::pair<const K, V> value_type;
+    typedef map_iterator<value_type> iterator;
+    typedef map_iterator<const value_type> const_iterator;
+
     map(size_t size, const C& compfunc = C(), const H& hashfunc = H()): size_(size), count(0) {
         hash = hashfunc;
         comp = compfunc;
-        arr = new HashNode<K,V>*[size];
+        arr = new HashNode<value_type>*[size];
         for (size_t i = 0; i < size; ++i)
             arr[i] = NULL;
     }
     map(const C& compfunc = C(), const H& hashfunc = H()): map(default_size<K>(), compfunc, hashfunc) {}
 
-    map(std::initializer_list<my::pair<K, V> > l): map(default_size<K>(), C(), H()) {
+    map(std::initializer_list<value_type> l): map(default_size<K>(), C(), H()) {
         insert(l);
     }
     template <class InputIterator>
     map(InputIterator first, InputIterator last): map(default_size<K>(), C(), H()) {
         insert(first, last);
     }
+    map(const map& m): map(default_size<K>(), C(), H()) {
+        copy(m);
+    }
     ~map() {clear(); delete [] arr;}
 
-    pair<pair<K,V>*, bool> insert(my::pair<K, V> p) {
+    std::pair<value_type*, bool> insert(const value_type& p) {
         size_t index = hash(p.first, size_);
         if (arr[index] == NULL) {
-            arr[index] = new HashNode<K, V>(p);
+            arr[index] = new HashNode<value_type>(p);
             ++count;
-            return pair<pair<K,V>*, bool>(&(arr[index]->data), true);
+            return std::pair<value_type*, bool>(&(arr[index]->data), true);
         }
         else {
-            HashNode<K, V>* temp = arr[index], *prev;
+            HashNode<value_type>* temp = arr[index], *prev;
             while (temp != NULL) {
                 if (comp(temp->data.first, p.first))
-                    return pair<pair<K,V>*, bool>(&(temp->data), false);
+                    return std::pair<value_type*, bool>(&(temp->data), false);
                 prev = temp;
                 temp = temp->next;
             }
-            prev->next = new HashNode<K, V>(p);
+            prev->next = new HashNode<value_type>(p);
             ++count;
-            return pair<pair<K,V>*, bool>(&(prev->next->data), true);
+            return std::pair<value_type*, bool>(&(prev->next->data), true);
         }
     }
     template <class InputIterator>
@@ -140,17 +160,17 @@ class my::map {
         for (; first != last; ++first)
             insert(*first);
     }
-    void insert(std::initializer_list<my::pair<K, V> > l) {
+    void insert(std::initializer_list<value_type> l) {
         for (auto it = l.begin(); it != l.end(); it++)
             insert(*it);
     }
-    pair<pair<K,V>*, bool> emplace(K key, V val) {
-        return insert(pair<K, V>(key, val));
+    std::pair<value_type*, bool> emplace(const K& key, V val) {
+        return insert(value_type(key, val));
     }
-    void erase(K val) {
+    void erase(const K& val) {
         size_t index = hash(val, size_);
         if (arr[index] != NULL) {
-            HashNode<K, V>* temp = arr[index], *prev;
+            HashNode<value_type>* temp = arr[index], *prev;
             if (comp(temp->data.first, val)) {
                 arr[index] = arr[index]->next;
                 delete temp; count--; return;
@@ -164,10 +184,10 @@ class my::map {
             delete temp; count--;
         }
     }
-    pair<K,V>* find(K val) {
+    value_type* find(K val) {
         size_t index = hash(val, size_);
         if (arr[index] != NULL) {
-            HashNode<K, V>* temp = arr[index];
+            HashNode<value_type>* temp = arr[index];
             while (temp != NULL) {
                 if (comp(temp->data.first, val))
                     return &(temp->data);
@@ -176,20 +196,25 @@ class my::map {
         }
         return NULL;
     }
-    V& at(K val) {
-        pair<K,V>* p = find(val);
+    V& at(const K& val) {
+        value_type* p = find(val);
         if (p == NULL) throw std::out_of_range("map::at() Key not found!");
         return p->second;
     }
-    V& operator[](K val) {
-        pair<K,V>* p = find(val);
+    V& operator[](const K& val) {
+        value_type* p = find(val);
         if (p != NULL)
             return p->second;
-        return insert(pair<K,V>(val)).first->second;
+        return insert(value_type(val, V())).first->second;
     }
-    map& operator=(std::initializer_list<my::pair<K, V> > l) {
+    map& operator=(std::initializer_list<value_type> l) {
         clear();
         insert(l);
+        return *this;
+    }
+    map& operator=(const map& m) {
+        clear();
+        copy(m);
         return *this;
     }
     template <class InputIterator>
@@ -205,7 +230,7 @@ class my::map {
         if (count != 0) {
             for (size_t i = 0; i < size_; i++) {
                 if (arr[i] != NULL) {
-                    HashNode<K, V>* temp = arr[i], *next;
+                    HashNode<value_type>* temp = arr[i], *next;
                     while (temp != NULL) {
                         next = temp->next;
                         delete temp;
@@ -217,6 +242,31 @@ class my::map {
         }
         count = 0;
     }
+    iterator begin() {
+        if (arr[0] != NULL)
+            return iterator(this, 0, arr[0]);
+        size_t i = 0;
+        while (i < size_ && arr[i] == NULL) ++i;
+        if (i == size_) return iterator();
+        return iterator(this, i, arr[i]);
+    }
+    iterator end() {return iterator();}
+    const_iterator cbegin() {
+        if (arr[0] != NULL)
+            return const_iterator(this, 0, arr[0]);
+        size_t i = 0;
+        while (i < size_ && arr[i] == NULL) ++i;
+        if (i == size_) return const_iterator();
+        return const_iterator(this, i, arr[i]);
+    }
+    const_iterator cend() {return const_iterator();}
+
+    private:
+    HashNode<value_type>** arr;
+    size_t count;
+    size_t size_;
+    H hash;
+    C comp;
 };
 
 #endif
