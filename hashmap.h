@@ -49,7 +49,7 @@ template <> size_t my::hash::operator() (std::string s, size_t size) {
     }
     return hash_value;
 }
-template <> size_t my::hash::operator()(const char* s, size_t size) {
+template <> size_t my::hash::operator() (const char* s, size_t size) {
     const size_t p = 31;
     size_t hash_value = 0;
     unsigned long long p_pow = 1;
@@ -59,7 +59,7 @@ template <> size_t my::hash::operator()(const char* s, size_t size) {
     }
     return hash_value;
 }
-template <> size_t my::hash::operator()(char s, size_t size) {
+template <> size_t my::hash::operator() (char s, size_t size) {
     return (size_t)(s - ' ') % size;
 }
 template <class T>
@@ -77,7 +77,7 @@ class my::map {
         typedef T* pointer;
         typedef std::forward_iterator_tag iterator_category;
         typedef void difference_type;
-        map_iterator(map* a = NULL, size_t i = 0, HashNode<value_type>* h = NULL) {m = a; index = i; p = h;}
+        map_iterator(map* a = NULL, size_t i = 0, HashNode<std::pair<const K, V> >* h = NULL) {m = a; index = i; p = h;}
         map_iterator& operator=(const map_iterator& it) {m = it.m; index = it.index; p = it.p;}
         bool operator==(const map_iterator& it) {return p == it.p;}
         bool operator!=(const map_iterator& it) {return p != it.p;}
@@ -98,7 +98,7 @@ class my::map {
         private:
         map* m;
         size_t index;
-        HashNode<value_type>* p;
+        HashNode<std::pair<const K, V> >* p;
     };
     void copy(const map& m) {
         for (size_t i = 0; i < m.size_; ++i) {
