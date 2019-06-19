@@ -737,7 +737,7 @@ my::string my::to_string (long long val) {
     int count = 49;
     s[count--] = '\0';
     s[count--] = '0' + v%10;
-    while (v > 10) {
+    while (v >= 10) {
         v /= 10;
         s[count--] = '0' + v%10;
     }
