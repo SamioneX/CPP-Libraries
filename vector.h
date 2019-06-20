@@ -78,9 +78,9 @@ class my::vector {
     void insert(iterator it, std::initializer_list<T> l);
     template <class... Args>
     iterator emplace(const_iterator it, Args&&... args)
-    {return insert(it, std::forward<Args>(args)...);}
+    {return insert(it, T(args...));}
     template <class... Args>
-    void emplace_back(Args&&... args) {push_back(std::forward<Args>(args)...);}
+    void emplace_back(Args&&... args) {push_back(T(args...));}
     void erase(iterator it);
     void erase(iterator begin, iterator end);
     void eraseAll(T val);
