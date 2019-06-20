@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <cstdlib>
-#include <iterator>
 
 namespace my {
     size_t strlen(const char* s);
