@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <stdexcept>
+#include "utilities.h" //for equals
 
 namespace my{
     /*----------get default size for table----------------*/
@@ -17,15 +18,9 @@ namespace my{
     template <> size_t my::hash::operator() (long double d, size_t size);
     template <> size_t hash::operator() (float, size_t);
     template <> size_t hash::operator() (char, size_t);
-    template<class T> struct equals;
     template <class T> struct HashNode;
-    template <class K, class V, class C = equals<K>, class H = hash> class map;
+    template <class K, class V, class C = my::equals<K>, class H = hash> class map;
 }
-template<class T> struct my::equals {
-    bool operator()(const T& lhs, const T& rhs) const {
-        return lhs == rhs;
-    }
-};
 /*-------------------for integer data types------------------*/
 template <class T> size_t my::hash::operator() (T t, size_t size) {
     return (size_t)t % size;
