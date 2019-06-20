@@ -1,7 +1,6 @@
 #ifndef PRIORITYQUEUE_H
 #define PRIORITYQUEUE_H
 
-#include <iostream>
 #include "binaryheap.h"
 
 namespace my {
