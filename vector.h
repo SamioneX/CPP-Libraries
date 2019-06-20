@@ -40,7 +40,7 @@ class my::vector {
         bool operator!=(const vector_iterator& it) {return ptr != it.ptr;}
         reference operator*() {return v->arr[ptr];}
         reference operator[](int n) {return v->arr[ptr+n];}
-        pointer operator->() {return v->arr+ptr;}
+        pointer operator->() {return v->arr[ptr];}
 
         private:
         size_t ptr;
@@ -57,7 +57,7 @@ class my::vector {
     vector(InputIterator begin, InputIterator end);
     vector(std::initializer_list<T> l);
     vector(const vector& vec);
-    ~vector();
+    ~vector() {free(arr);}
     vector& operator=(const vector& vec);
     vector& operator=(std::initializer_list<T> l);
     void assign(size_t n, const T& val);
@@ -76,8 +76,11 @@ class my::vector {
     template<class InputIterator>
     void insert(iterator it, InputIterator begin, InputIterator end);
     void insert(iterator it, std::initializer_list<T> l);
-    iterator emplace(iterator it, const T& val) {return insert(it, val);}
-    void emplace_back(const T& val) {push_back(val);}
+    template <class... Args>
+    iterator emplace(const_iterator it, Args&&... args)
+    {return insert(it, std::forward<Args>(args)...);}
+    template <class... Args>
+    void emplace_back(Args&&... args) {push_back(std::forward<Args>(args)...);}
     void erase(iterator it);
     void erase(iterator begin, iterator end);
     void eraseAll(T val);
@@ -148,10 +151,6 @@ my::vector<T>::vector(const vector& vec): allocated(vec.size()) {
         arr[i] = vec.arr[i];
     }
     inUse = allocated;
-}
-template <class T>
-my::vector<T>::~vector() {
-    this->clear();
 }
 template <class T>
 my::vector<T>& my::vector<T>::operator=(const vector& vec) {
