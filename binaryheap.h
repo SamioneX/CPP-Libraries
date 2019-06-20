@@ -2,19 +2,10 @@
 #define BINARYHEAP_H
 
 #include <iostream>
+#include "utilities.h" //for swap and greater
 
 namespace my {
-    template <class T> struct greater;
-    template <class T> void swap(T& a, T& b);
-    template <class T, class C = greater<T> > class binary_heap;
-}
-template<class T> struct my::greater {
-    bool operator()(const T& lhs, const T& rhs) const {
-        return lhs > rhs;
-    }
-};
-template <class T> void my::swap(T& a, T& b) {
-    T temp = a; a = b; b = temp;
+    template <class T, class C = my::greater<T> > class binary_heap;
 }
 template <class T, class C> class my::binary_heap {
     public:
