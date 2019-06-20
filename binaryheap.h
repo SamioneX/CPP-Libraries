@@ -135,7 +135,8 @@ my::binary_heap<T, C>& my::binary_heap<T, C>::operator=(const binary_heap& bh) {
     inUse = allocated = bh.inUse;
     arr = new T [allocated];
     for (size_t i = 0; i < inUse; ++i)
-        arr[i] = bh.arr[i];  
+        arr[i] = bh.arr[i];
+    return *this;
 }
 template <class T, class C>
 my::binary_heap<T, C>& my::binary_heap<T, C>::operator=(std::initializer_list<T> l) {
@@ -143,6 +144,7 @@ my::binary_heap<T, C>& my::binary_heap<T, C>::operator=(std::initializer_list<T>
     inUse = allocated = l.size();
     arr = new T [allocated];
     for(const T& x : l) insert(x);
+    return *this;
 }
 template <class T, class C> template<class InputIterator>
 void my::binary_heap<T, C>::assign(InputIterator begin, InputIterator end) {
