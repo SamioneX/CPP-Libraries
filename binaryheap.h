@@ -71,7 +71,7 @@ template <class T, class C> class my::binary_heap {
     iterator insert(const T& val);
     template<class InputIterator> void insert(InputIterator begin, InputIterator end);
     void insert(std::initializer_list<T> l);
-    template <class... Args> void emplace (Args&&... args) {insert(std::forward<Args>(args)...);}
+    template <class... Args> void emplace (Args&&... args) {insert(T(args...));}
     void erase(iterator it);
     binary_heap operator+(const binary_heap& bh) const;
     bool empty() const {return inUse == 0;}
