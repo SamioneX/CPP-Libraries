@@ -2,7 +2,6 @@
 #define DEQUE_H
 
 #include <iostream>
-#include <iterator>
 #include <cstdlib>
 
 namespace my {
