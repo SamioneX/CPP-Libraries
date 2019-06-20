@@ -1,5 +1,5 @@
-#ifndef COMPARE_H
-#define COMPARE_H
+#ifndef UTILITIES_H
+#define UTILITIES_H
 
 namespace my {
     int strcmp(const char* lhs, const char* rhs) {
@@ -42,6 +42,9 @@ namespace my {
             return strcmp(lhs, rhs) == 0;
         }
     };
+    template <class T> void swap(T& a, T& b) {
+        T temp = a; a = b; b = temp;
+    }
 }
 
 #endif
