@@ -2,15 +2,13 @@
 #define LIST_H
 
 #include <iostream>
-#include <iterator>
 #include <stdexcept>
+#include "utilities.h"
 
 namespace my {
     template <class T> class node;
     template <class T> class list;
     template<class T> std::ostream& operator<< (std::ostream& os, const list<T>& v);
-    template<class T> bool sort_compare(T val1, T val2) {return val1 < val2;}
-    template<class T> bool unique_compare(T val1, T val2) {return val1 == val2;}
 }
 template <class T>
 class my::node {
@@ -18,7 +16,8 @@ class my::node {
     T data;
     node<T>* next;
     node<T>* prev;
-    node(T val = T()): data(val), next(NULL), prev(NULL) {}
+    node(): next(NULL), prev(NULL) {}
+    node(T val): data(val), next(NULL), prev(NULL) {}
 };
 template <class T>
 class my::list {
@@ -90,12 +89,12 @@ class my::list {
             const_reverse_iterator operator--(int) {const_reverse_iterator it(this->hd); --*this; return it;}
         };
         list();
-        list(int n, T val = T());
+        list(size_t n, T val = T());
         list(std::initializer_list<T> l);
         list(const list& l);
         template<class InputIterator>
         list(InputIterator begin, InputIterator end);
-        ~list();
+        ~list() {clear();}
         void operator=(const list& l);
         void operator=(std::initializer_list<T> l);
         void assign(size_t n, T val);
@@ -105,8 +104,8 @@ class my::list {
         T& operator[](size_t val) {return this->at(val);}
         T& front();
         T& back();
-        void push_back(T val);
-        void push_front(T val);
+        void push_back(const T& val);
+        void push_front(const T& val);
         void pop_front() {remove(head);}
         void pop_back() {remove(tail);}
         template<class InputIterator>
@@ -115,21 +114,24 @@ class my::list {
         template<class InputIterator>
         void insert(iterator it, InputIterator begin, InputIterator end);
         void insert(iterator it, std::initializer_list<T> l);
-        iterator emplace(iterator it, T val) {return insert(it, val);}
-        void emplace_back(T val) {push_back(val);}
-        void emplace_front(T val) {push_front(val);}
+        template <class... Args>
+        iterator emplace(iterator it, Args&&... args) {return insert(it, T(args...));}
+        template <class... Args>
+        void emplace_back(Args&&... args) {push_back(T(args...));}
+        template <class... Args>
+        void emplace_front(Args&&... args) {push_front(T(args...));}
         void erase(iterator iter) {remove(iter.hd);}
         void erase(iterator begin, iterator end);
-        void removeAll(T val);
+        void removeAll(const T& val);
         template <class func>
         void remove_if(func compare);
         size_t size() const {return count;}
-        void resize(int v, T val = T());
+        void resize(size_t v, T val = T());
         bool empty() {return (head == NULL);}
-        void sort () {head = mergeSort(head, sort_compare<T>);}
+        void sort () {head = mergeSort(head, my::less<T>());}
         template <class func>
         void sort(func compare) {head = mergeSort(head, compare);}
-        void unique() {doUnique(unique_compare<T>);}
+        void unique() {doUnique(my::equals<T>());}
         template <class func>
         void unique(func compare) {doUnique(compare);}
         iterator find(iterator begin, iterator end, T val);
@@ -155,7 +157,7 @@ template <class T>
 my::list<T>::list(): head(NULL), tail(NULL), count(0) {}
 
 template <class T>
-my::list<T>::list(int n, T val): list() {
+my::list<T>::list(size_t n, T val): list() {
     for (int i = 0; i < n; i++) {
       node<T>* pNew = new node<T>(val);
       append(pNew);
@@ -176,10 +178,6 @@ my::list<T>::list(const list& l): list() {
 template <class T> template<class InputIterator>
 my::list<T>::list(InputIterator begin, InputIterator end): list() {copy(begin, end);}
 
-template <class T>
-my::list<T>::~list() {
-    clear();
-}
 /*--------------------------------Assignment Operators-----------------------------*/
 template <class T>
 void my::list<T>::operator=(const list& l) {
@@ -197,7 +195,7 @@ void my::list<T>::operator=(std::initializer_list<T> l) {clear(); copy(l.begin()
 template <class T>
 void my::list<T>::assign(size_t n, T val) {
     clear();
-    for (int i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
         push_back(val);
 }
 template <class T> template<class InputIterator>
@@ -211,14 +209,15 @@ template <class T>
 T& my::list<T>::at(size_t val) {
     if (val >= count) throw std::out_of_range("my::list::range_check");
     node<T>* temp;
+    size_t j;
     if (val < count/2) {
         temp = head;
-        for (int j = 0; j < val; j++)
+        for (j = 0; j < val; j++)
             temp = temp->next;
     }
     else {
         temp = tail; val++;
-        for (int j = count; j > val; j--)
+        for (j = count; j > val; j--)
             temp = temp->prev;
     }
     return temp->data;
@@ -248,12 +247,12 @@ void my::list<T>::append(node<T>* pNew) {
     ++count;
 }
 template <class T>
-void my::list<T>::push_back(T val) {
+void my::list<T>::push_back(const T& val) {
     node<T>* pNew = new node<T>(val);
     append(pNew);
 }
 template <class T>
-void my::list<T>::push_front(T val) {
+void my::list<T>::push_front(const T& val) {
     node<T>* pNew = new node<T>(val);
     if (head == NULL) {
         head = pNew;
@@ -269,15 +268,15 @@ void my::list<T>::push_front(T val) {
 template <class T>
 void my::list<T>::insert(node<T>* pTemp, node<T>* start, node<T>* stop) {
     node<T>* t = start;
-    if (head == NULL) {
+    if (head == NULL) {  //if empty
         head = pTemp; tail = stop;
     }
-    else if ((head != NULL) && (start == NULL)) {
+    else if ((head != NULL) && (start == NULL)) { //if we're inserting at end
         tail->next = pTemp;
         pTemp->prev = tail;
         tail = stop;
     }
-    else if (start == head) {
+    else if (start == head) {  //if we're inserting at the head
         stop->next = head;
         head->prev = stop;
         head = pTemp;
@@ -294,12 +293,14 @@ template <class T> class my::list<T>::
 iterator my::list<T>::insert(iterator it, const T& val, size_t n) {
     node<T> *start = it.hd, *pTemp = new node<T>(val);
     node<T> *stop = pTemp;
+    //create and link all nodes to be inserted when n > 1
     for (size_t i = 1; i < n; i++) {
         node<T>* pNew = new node<T>(val);
         pNew->prev = stop;
         stop->next = pNew;
         stop = pNew;
     }
+    //insert the nodes now bounded by pTemp and stop at start
     insert(pTemp, start, stop);
     count += n;
     return iterator(pTemp);
@@ -359,7 +360,7 @@ void my::list<T>::erase(iterator begin, iterator end) {
     }
 }
 template <class T>
-void my::list<T>::removeAll(T val) {
+void my::list<T>::removeAll(const T& val) {
     node<T>* current = head, *next;
     while (current != NULL) { 
         if (current->data == val) { 
@@ -401,7 +402,7 @@ void my::list<T>::doUnique(func compare) {
     }
 }
 template <class T>
-void my::list<T>::resize(int v, T val) {
+void my::list<T>::resize(size_t v, T val) {
     while (count < v) {
         node<T>* pNew = new node<T>(val);
         append(pNew);
