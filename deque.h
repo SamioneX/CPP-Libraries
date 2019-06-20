@@ -60,7 +60,7 @@ class my::deque {
     deque(InputIterator begin, InputIterator end);
     deque(std::initializer_list<T> l);
     deque(const deque& dq);
-    ~deque();
+    ~deque() {free(arr);}
     deque& operator=(const deque& dq);
     deque& operator=(std::initializer_list<T> l);
     void assign(size_t n, const T& val);
@@ -81,9 +81,12 @@ class my::deque {
     template<class InputIterator>
     void insert(iterator it, InputIterator begin, InputIterator end);
     void insert(iterator it, std::initializer_list<T> l);
-    iterator emplace(iterator it, const T& val) {return insert(it, val);}
-    void emplace_back(const T& val) {push_back(val);}
-    void emplace_front(const T& val) {push_front(val);}
+    template <class... Args>
+    iterator emplace(iterator it, Args&&... args) {return insert(it, T(args...));}
+    template <class... Args>
+    void emplace_back(Args&&... args) {push_back(T(args...));}
+    template <class... Args>
+    void emplace_front(Args&&... args) {push_front(T(args...));}
     void erase(iterator it);
     void erase(iterator begin, iterator end);
     void eraseAll(const T& val);
@@ -246,10 +249,6 @@ my::deque<T>::deque(std::initializer_list<T> l): deque(l.begin(), l.end()) {}
 template <class T>
 my::deque<T>::deque(const deque& dq): deque(dq.begin(), dq.end()) {}
 
-template <class T>
-my::deque<T>::~deque() {
-    this->clear();
-}
 template <class T>
 my::deque<T>& my::deque<T>::operator=(const deque& dq) {
     clear();
