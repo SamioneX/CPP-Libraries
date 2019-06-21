@@ -2,7 +2,7 @@
 #define BINARYHEAP_H
 
 #include <iostream>
-#include "utilities.h" //for swap and greater
+#include "utilities.h" //for swap and less
 
 namespace my {
     template <class T, class C = my::less<T> > class binary_heap;
