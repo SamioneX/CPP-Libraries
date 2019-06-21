@@ -5,7 +5,7 @@
 #include "utilities.h" //for swap and greater
 
 namespace my {
-    template <class T, class C = my::greater<T> > class binary_heap;
+    template <class T, class C = my::less<T> > class binary_heap;
 }
 template <class T, class C> class my::binary_heap {
     public:
@@ -155,7 +155,7 @@ template <class T, class C> class my::binary_heap<T, C>::
 b_heap_iterator<T> my::binary_heap<T, C>::move_up(iterator it, const T& new_val) {
     size_t i = it - this->begin();
     arr[i] = new_val;
-    while (i != 0 && !compare(arr[parent(i)], arr[i])) { 
+    while (i != 0 && compare(arr[parent(i)], arr[i])) { 
        my::swap(arr[i], arr[parent(i)]); 
        i = parent(i); 
     }
@@ -167,7 +167,7 @@ b_heap_iterator<T> my::binary_heap<T, C>::insert(const T& val) {
         growArray(allocated);
     arr[inUse++] = val;
     size_t i = inUse-1;
-    while (i != 0 && !compare(arr[parent(i)], arr[i])) { 
+    while (i != 0 && compare(arr[parent(i)], arr[i])) { 
        my::swap(arr[i], arr[parent(i)]);
        i = parent(i); 
     }
@@ -240,9 +240,9 @@ void my::binary_heap<T, C>::clear() {
 template <class T, class C>
 void my::binary_heap<T, C>::heapify(size_t i) {
     size_t l = left(i), r = right(i), smallest = i;
-    if (l < inUse && compare(arr[l], arr[i])) 
+    if (l < inUse && !compare(arr[l], arr[i])) 
         smallest = l; 
-    if (r < inUse && compare(arr[r], arr[smallest])) 
+    if (r < inUse && !compare(arr[r], arr[smallest])) 
         smallest = r; 
     if (smallest != i) { 
         my::swap(arr[i], arr[smallest]); 
