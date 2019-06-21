@@ -6,8 +6,10 @@
 
 namespace my {
     template <class T, class C = my::less<T> > class binary_heap;
+    template<class T, class C> std::ostream& operator<< (std::ostream& os, const binary_heap<T, C>& v);
 }
 template <class T, class C> class my::binary_heap {
+    friend std::ostream& operator<< <> (std::ostream& os, const binary_heap& v);
     public:
     template <class U> class b_heap_iterator {
         public:
@@ -259,6 +261,14 @@ template <class T, class C> template <class InputIterator>
 void my::binary_heap<T, C>::insert_help(InputIterator first, InputIterator last, typename std::iterator_traits<InputIterator>::iterator_category) {
     for (; first != last; ++first)
         insert(*first);
+}
+template<class T, class C>
+std::ostream& my::operator << (std::ostream& os, const my::binary_heap<T, C>& bh) {
+    os << "[ ";
+    for (size_t i = 0; i < bh.inUse; ++i)
+        os << bh.arr[i] << ' ';
+    os << "] " << std::endl;
+    return os;
 }
 
 #endif
