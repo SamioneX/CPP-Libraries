@@ -38,8 +38,8 @@ template <> size_t my::hash::operator() (std::string s, size_t size) {
     const size_t p = 31;
     size_t hash_value = 0;
     unsigned long long p_pow = 1;
-    for (char c : s) {
-        hash_value = (hash_value + (c - ' ' + 1) * p_pow) % size;
+    for (int i = 0; i < s.size(); ++i) {
+        hash_value = (hash_value + (s[i] - ' ' + 1) * p_pow) % size;
         p_pow = (p_pow * p) % size;
     }
     return hash_value;
@@ -104,33 +104,53 @@ class my::map {
             }
         }
     }
+    void init() {
+        arr = new HashNode<value_type>*[size_];
+        for (size_t i = 0; i < size_; ++i)
+            arr[i] = NULL;
+    }
     public:
+    typedef size_t size_type;
     typedef std::pair<const K, V> value_type;
     typedef map_iterator<value_type> iterator;
     typedef map_iterator<const value_type> const_iterator;
 
-    map(size_t size, const C& compfunc = C(), const H& hashfunc = H()): size_(size), count(0) {
+    map(size_t size, const C& compfunc = C(), const H& hashfunc = H()): arr(NULL), size_(size), count(0) {
         hash = hashfunc;
         comp = compfunc;
-        arr = new HashNode<value_type>*[size];
-        for (size_t i = 0; i < size; ++i)
-            arr[i] = NULL;
     }
-    map(const C& compfunc = C(), const H& hashfunc = H()): map(default_size<K>(), compfunc, hashfunc) {}
-
-    map(std::initializer_list<value_type> l): map(default_size<K>(), C(), H()) {
+    map(const C& compfunc = C(), const H& hashfunc = H()): arr(NULL), size_(default_size<K>()), count(0) {
+        hash = hashfunc;
+        comp = compfunc;
+    }
+    #if __cplusplus >= 201103L
+    map(std::initializer_list<value_type> l): size_(default_size<K>()), count(0) {
+        init();
         insert(l);
     }
+    map(map&& m) {
+        arr = m.arr; m.arr = NULL;
+        count = m.count; m.count = 0;
+        size_ = m.size_;
+        hash = m.hash;
+        comp = m.comp;
+    }
+    #endif
+
     template <class InputIterator>
-    map(InputIterator first, InputIterator last): map(default_size<K>(), C(), H()) {
+    map(InputIterator first, InputIterator last): size_(default_size<K>()), count(0) {
+        init();
         insert(first, last);
     }
-    map(const map& m): map(default_size<K>(), C(), H()) {
+    map(const map& m): size_(m.size_), count(0), hash(m.hash), comp(m.comp) {
+        init();
         copy(m);
     }
     ~map() {clear(); delete [] arr;}
 
     std::pair<value_type*, bool> insert(const value_type& p) {
+        if (arr == NULL) init();
+
         size_t index = hash(p.first, size_);
         if (arr[index] == NULL) {
             arr[index] = new HashNode<value_type>(p);
@@ -155,13 +175,16 @@ class my::map {
         for (; first != last; ++first)
             insert(*first);
     }
+    #if __cplusplus >= 201103L
     void insert(std::initializer_list<value_type> l) {
         for (auto it = l.begin(); it != l.end(); it++)
             insert(*it);
     }
-    std::pair<value_type*, bool> emplace(const K& key, V val) {
-        return insert(value_type(key, val));
+    template <class... Args>
+    std::pair<value_type*, bool> emplace(Args&&... args) {
+        return insert(value_type(args...));
     }
+    #endif
     void erase(const K& val) {
         size_t index = hash(val, size_);
         if (arr[index] != NULL) {
@@ -202,11 +225,24 @@ class my::map {
             return p->second;
         return insert(value_type(val, V())).first->second;
     }
+    #if __cplusplus >= 201103L
     map& operator=(std::initializer_list<value_type> l) {
         clear();
         insert(l);
         return *this;
     }
+    map& operator=(map&& m) {
+        if (this != &m) {
+            clear();
+            delete [] arr;
+            arr = m.arr; m.arr = NULL;
+            count = m.count; m.count = 0;
+            size_ = m.size_;
+            hash = m.hash;
+            comp = m.comp;
+        }
+    }
+    #endif
     map& operator=(const map& m) {
         clear();
         copy(m);
