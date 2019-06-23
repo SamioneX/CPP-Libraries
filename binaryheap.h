@@ -45,26 +45,23 @@ template <class T, class C> class my::binary_heap {
         const binary_heap* bh;
     };
     typedef size_t size_type;
+    typedef T value_type;
     typedef b_heap_iterator<T> iterator;
     typedef b_heap_iterator<const T> const_iterator;
     typedef std::reverse_iterator<iterator> reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-    binary_heap(const C& comp = C());
-    template<class InputIterator> binary_heap(InputIterator begin, InputIterator end);
-    binary_heap(std::initializer_list<T> l);
+    explicit binary_heap(const C& comp = C());
+    template<class InputIterator> binary_heap (InputIterator begin, InputIterator end);
     binary_heap(const binary_heap& bh);
     ~binary_heap() {delete [] arr;}
     binary_heap& operator=(const binary_heap& bh);
-    binary_heap& operator=(std::initializer_list<T> l);
     template<class InputIterator> void assign(InputIterator begin, InputIterator end);
     T& top() { return arr[0];}
     void pop();
     iterator move_up(iterator it, const T& new_val);
     iterator insert(const T& val);
     template<class InputIterator> void insert(InputIterator begin, InputIterator end);
-    void insert(std::initializer_list<T> l);
-    template <class... Args> void emplace (Args&&... args) {insert(T(args...));}
     void erase(iterator it);
     binary_heap operator+(const binary_heap& bh) const;
     bool empty() const {return inUse == 0;}
@@ -84,6 +81,16 @@ template <class T, class C> class my::binary_heap {
     const_reverse_iterator crend() const
     {return const_reverse_iterator(cbegin());}
 
+    #if __cplusplus >= 201103L
+    binary_heap(binary_heap&& h);
+    binary_heap& operator=(binary_heap&& h);
+    binary_heap(std::initializer_list<T> l);
+    binary_heap& operator=(std::initializer_list<T> l);
+    void insert(std::initializer_list<T> l);
+    template <class... Args> void emplace (Args&&... args) {insert(T(args...));}
+
+    #endif
+
     private:
     void growArray(size_t);
     void clear();
@@ -101,19 +108,51 @@ template <class T, class C> class my::binary_heap {
     size_t allocated;
     C compare;
 };
+#if __cplusplus >= 201103L
 template <class T, class C>
-my::binary_heap<T, C>::binary_heap(const C& comp): arr(NULL), inUse(0), allocated(0) {
-    compare = comp;
+my::binary_heap<T, C>::binary_heap(binary_heap&& h) {
+    arr = h.arr; h.arr = NULL;
+    inUse = h.inUse; h.inUse = 0;
+    allocated = h.allocated; h.allocated = 0;
 }
-template <class T, class C> template<class InputIterator>
-my::binary_heap<T, C>::binary_heap(InputIterator begin, InputIterator end): binary_heap(C()) {
-    insert_help(begin, end, typename std::iterator_traits<InputIterator>::iterator_category());
+template <class T, class C>
+my::binary_heap<T, C>& my::binary_heap<T, C>::operator=(binary_heap&& h) {
+    if (this != &h) {
+        delete [] arr;
+        arr = h.arr; h.arr = NULL;
+        inUse = h.inUse; h.inUse = 0;
+        allocated = h.allocated; h.allocated = 0;
+    }
+    return *this;
 }
 template <class T, class C>
 my::binary_heap<T, C>::binary_heap(std::initializer_list<T> l): inUse(0), allocated(l.size()) {
     compare = C();
     arr = new T [allocated];
     for(const T& x : l) insert(x);
+}
+template <class T, class C>
+my::binary_heap<T, C>& my::binary_heap<T, C>::operator=(std::initializer_list<T> l) {
+    delete [] arr;
+    inUse = allocated = l.size();
+    arr = new T [allocated];
+    for(const T& x : l) insert(x);
+    return *this;
+}
+template <class T, class C>
+void my::binary_heap<T, C>::insert(std::initializer_list<T> l) {
+    reserve(inUse + l.size());
+    for(const T& x : l) insert(x);
+}
+#endif
+
+template <class T, class C>
+my::binary_heap<T, C>::binary_heap(const C& comp): arr(NULL), inUse(0), allocated(0) {
+    compare = comp;
+}
+template <class T, class C> template<class InputIterator>
+my::binary_heap<T, C>::binary_heap(InputIterator begin, InputIterator end): arr(NULL), inUse(0), allocated(0) {
+    insert_help(begin, end, typename std::iterator_traits<InputIterator>::iterator_category());
 }
 template <class T, class C>
 my::binary_heap<T, C>::binary_heap(const binary_heap& bh): allocated(bh.inUse) {
@@ -129,14 +168,6 @@ my::binary_heap<T, C>& my::binary_heap<T, C>::operator=(const binary_heap& bh) {
     arr = new T [allocated];
     for (size_t i = 0; i < inUse; ++i)
         arr[i] = bh.arr[i];
-    return *this;
-}
-template <class T, class C>
-my::binary_heap<T, C>& my::binary_heap<T, C>::operator=(std::initializer_list<T> l) {
-    delete [] arr;
-    inUse = allocated = l.size();
-    arr = new T [allocated];
-    for(const T& x : l) insert(x);
     return *this;
 }
 template <class T, class C> template<class InputIterator>
@@ -178,11 +209,6 @@ b_heap_iterator<T> my::binary_heap<T, C>::insert(const T& val) {
 template <class T, class C> template<class InputIterator>
 void my::binary_heap<T, C>::insert(InputIterator begin, InputIterator end) {
     insert_help(begin, end, typename std::iterator_traits<InputIterator>::iterator_category());
-}
-template <class T, class C>
-void my::binary_heap<T, C>::insert(std::initializer_list<T> l) {
-    reserve(inUse + l.size());
-    for(const T& x : l) insert(x);
 }
 template <class T, class C>
 void my::binary_heap<T, C>::erase(iterator it) {
