@@ -162,11 +162,11 @@ my::vector<T>& my::vector<T>::operator= (std::initializer_list<T> l) {
 }
 template <class T>
 void my::vector<T>::insert(iterator it, std::initializer_list<T> l) {
-    int n = l.size();
-    int first = it - this->begin();
-    int last = first + n - 1;
+    size_t n = l.size();
+    size_t first = it - this->begin();
+    size_t last = first + n - 1;
     this->resize(inUse+n);
-    int i;
+    size_t i;
     for (i = inUse-1; i > last; i--)
         arr[i] = arr[i-n];
     auto iter = l.begin();
@@ -378,8 +378,8 @@ template <class T>
 void my::vector<T>::erase(iterator begin, iterator end) {
     if (inUse == 0)
         return;
-    int n = end - begin;
-    for (int i = begin.index; i < inUse-n; i++)
+    size_t n = end - begin;
+    for (size_t i = begin.index; i < inUse-n; i++)
         arr[i] = arr[i+n];
     this->resize(inUse-n);
 }
