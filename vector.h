@@ -396,25 +396,22 @@ void my::vector<T>::eraseAll(const T& val) {
 }
 template <class T> template <class C>
 size_t my::vector<T>::partition(size_t l, size_t h, const C& comp) {
-    T temp;
     bool done = false;
    
     // Pick middle element as pivot
     size_t midpoint = l + (h - l) / 2;
     T pivot = arr[midpoint];
     while (!done) {
-        // Increment l while numbers[l] < pivot
+        // Increment l while arr[l] < pivot
         while (comp(arr[l], pivot)) ++l;
-        // Decrement h while pivot < numbers[h]
+        // Decrement h while pivot < arr[h]
         while (comp(pivot, arr[h])) --h;
         // If there are zero or one elements remaining, all numbers are partitioned. Return h
         if (l >= h)
             done = true;
         else {
-            // Swap numbers[l] and numbers[h], update l and h
-            temp = arr[l];
-            arr[l] = arr[h];
-            arr[h] = temp;
+            // Swap arr[l] and arr[h], update l and high
+            my::swap(arr[l], arr[h]);
             ++l; --h;
         }
     }
@@ -457,7 +454,7 @@ template<class T>
 std::ostream& my::operator << ( std::ostream& os, const my::vector<T>& v ) {
     os << "[ ";
     for (int i = 0; i < v.size(); i++)
-        os << v.at(i) << " ";
+        os << v.[i] << " ";
     os << "]" << std::endl;
     return os;
 }
@@ -476,7 +473,7 @@ bool operator==(my::vector<T>& v1, my::vector<T>& v2) {
     if (v1.size() != v2.size())
         return false;
     for (int i = 0; i < v1.size(); i++) {
-        if (v1.at(i) != v2.at(i))
+        if (v1[i] != v2[i])
             return false;
     }
     return true;
