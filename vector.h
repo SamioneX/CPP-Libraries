@@ -55,7 +55,7 @@ class my::vector {
 
     explicit vector();
     explicit vector(size_t n);
-    explicit vector(size_t n, const T& val);
+    vector(size_t n, const T& val);
     template<class InputIterator>
     vector(InputIterator begin, InputIterator end);
     vector(const vector& vec);
