@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <cstdlib>
+#include "utilities.h"
 
 namespace my {
     template <class T> class deque;
@@ -12,7 +13,6 @@ namespace my {
 template <class T>
 class my::deque {
     friend std::ostream& operator<< <> (std::ostream& os, const deque& dq);
-
     public:
     template <class U> class deque_iterator {
         public:
@@ -48,20 +48,20 @@ class my::deque {
         const deque* dq;
     };
     typedef size_t size_type;
+    typedef T value_type;
     typedef deque_iterator<T> iterator;
     typedef deque_iterator<const T> const_iterator;
     typedef std::reverse_iterator<iterator> reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-    deque();
-    deque(size_t size, T val = T());
+    explicit deque();
+    explicit deque(size_t n);
+    deque(size_t n, const T& val);
     template<class InputIterator>
     deque(InputIterator begin, InputIterator end);
-    deque(std::initializer_list<T> l);
     deque(const deque& dq);
     ~deque() {free(arr);}
     deque& operator=(const deque& dq);
-    deque& operator=(std::initializer_list<T> l);
     void assign(size_t n, const T& val);
     template<class InputIterator>
     void assign(InputIterator begin, InputIterator end);
@@ -79,25 +79,21 @@ class my::deque {
     iterator insert(iterator it, const T& val, size_t n = 1);
     template<class InputIterator>
     void insert(iterator it, InputIterator begin, InputIterator end);
-    void insert(iterator it, std::initializer_list<T> l);
-    template <class... Args>
-    iterator emplace(iterator it, Args&&... args) {return insert(it, T(args...));}
-    template <class... Args>
-    void emplace_back(Args&&... args) {push_back(T(args...));}
-    template <class... Args>
-    void emplace_front(Args&&... args) {push_front(T(args...));}
     void erase(iterator it);
     void erase(iterator begin, iterator end);
     void eraseAll(const T& val);
     size_t size() const;
     size_t capacity() const {return size_;}
-    void resize(size_t n, T val = T());
+    void resize(size_t n, const T& val);
+    void resize(size_t n) {resize(n, T());}
     void shrink_to_fit();
     void swap(deque& vec);
     void clear();
-    void sort() {quickSort(0, size()-1);}
+    void sort() {quickSort(0, size()-1, my::less<T>());}
+    template <class C>
+    void sort(C compare) {quickSort(0, size()-1, compare);}
     iterator find(iterator begin, iterator end, const T& val);
-    iterator find_s(iterator begin, iterator end, const T& val);
+    iterator find_s(iterator begin, iterator end, const T& val);  //uses binary search
     iterator begin() const {return iterator(0, this);}
     iterator end() const {return iterator(size(), this);}
     const_iterator cbegin() const {return const_iterator(0, this);}
@@ -109,6 +105,20 @@ class my::deque {
     const_reverse_iterator crend() const
     {return const_reverse_iterator(cbegin());}
 
+    #if __cplusplus >= 201103L
+    deque(std::initializer_list<T> l);
+    deque(deque&& dq);
+    deque& operator=(std::initializer_list<T> l);
+    deque& operator=(deque&& dq);
+    void insert(iterator it, std::initializer_list<T> l);
+    template <class... Args>
+    iterator emplace(iterator it, Args&&... args) {return insert(it, T(args...));}
+    template <class... Args>
+    void emplace_back(Args&&... args) {push_back(T(args...));}
+    template <class... Args>
+    void emplace_front(Args&&... args) {push_front(T(args...));}
+    #endif
+
     private:
     T* arr;
     size_t size_;
@@ -116,49 +126,11 @@ class my::deque {
     size_t tail;
     void growArray(size_t n);
     bool isFull();
-    size_t partition(size_t l, size_t h);
-    void quickSort(size_t low, size_t high);
+    template <class C>
+    size_t partition(size_t l, size_t h, const C& comp);
+    template <class C>
+    void quickSort(size_t low, size_t high, const C& comp);
 };
-template <class InputIterator1, class InputIterator2>
-  bool lexicographicalCompare (InputIterator1 first1, InputIterator1 last1,
-                                InputIterator2 first2, InputIterator2 last2) {
-    while (first1!=last1) {
-        if (first2==last2 || *first2<*first1) return false;
-        else if (*first1<*first2) return true;
-        ++first1; ++first2;
-    }
-    return (first2!=last2);
-}
-template <class T>
-bool operator==(my::deque<T>& d1, my::deque<T>& d2) {
-    if (d1.size() != d2.size())
-        return false;
-    for (int i = 0; i < d1.size(); i++) {
-        if (d1[i] != d2[i])
-            return false;
-    }
-    return true;
-}
-template <class T>
-bool operator!=(my::deque<T>& d1, my::deque<T>& d2) {
-    return !(d1 == d2);
-}
-template <class T>
-bool operator<(my::deque<T>& d1, my::deque<T>& d2) {
-    return(lexicographicalCompare(d1.begin(), d1.end(), d2.begin(), d2.end()));
-}
-template <class T>
-bool operator<=(my::deque<T>& d1, my::deque<T>& d2) {
-    return (d1 == d2 || d1 < d2);
-}
-template <class T>
-bool operator>(my::deque<T>& d1, my::deque<T>& d2) {
-    return !(d1 == d2 || d1 < d2);
-}
-template <class T>
-bool operator>=(my::deque<T>& d1, my::deque<T>& d2) {
-    return !(d1 < d2);
-}
 template <class T>
 bool my::deque<T>::isFull() {
     return ((head == tail+1) || (head == 0 && tail == size_-1));
@@ -172,8 +144,9 @@ void my::deque<T>::growArray(size_t n) {
     free(arr);
     arr = temp; size_ += n; head = 0; tail = size-1;
 }
+
 template <class T>
-void my::deque<T>::resize(size_t n, T val) {
+void my::deque<T>::resize(size_t n, const T& val) {
     if (n == 0) {
         clear(); return;
     }
@@ -233,17 +206,65 @@ template <class T>
 my::deque<T>::deque(): arr(NULL), size_(0), head(-1), tail(-1) {}
 
 template <class T>
-my::deque<T>::deque(size_t size, T val): size_(size), head(0), tail(size-1) {
+my::deque<T>::deque(size_t size): size_(size), head(0), tail(size-1) {
+    arr = (T*)malloc(sizeof(T)*size_);
+    for (int i = 0; i < size; i++)
+        arr[i] = T();
+}
+template <class T>
+my::deque<T>::deque(size_t size, const T& val): size_(size), head(0), tail(size-1) {
     arr = (T*)malloc(sizeof(T)*size_);
     for (int i = 0; i < size; i++)
         arr[i] = val;
 }
 template <class T> template<class InputIterator>
-my::deque<T>::deque(InputIterator begin, InputIterator end): deque() {
+my::deque<T>::deque(InputIterator begin, InputIterator end): arr(NULL), size_(0), head(-1), tail(-1) {
     this->copy(begin, end);
 }
+#if __cplusplus >= 201103L
 template <class T>
 my::deque<T>::deque(std::initializer_list<T> l): deque(l.begin(), l.end()) {}
+
+template <class T>
+my::deque<T>& my::deque<T>::operator=(std::initializer_list<T> l) {
+    clear();
+    this->copy(l.begin(), l.end());
+    return *this;
+}
+template <class T>
+my::deque<T>::deque(deque&& v) {
+    size_ = v.size_; v.size_ = 0;
+    head = v.head; v.head = -1;
+    tail = v.tail; v.tail = -1;
+    arr = v.arr; v.arr = NULL;
+}
+template <class T>
+my::deque<T>& my::deque<T>::operator=(deque&& v) {
+    if (this != &v) {
+        free(arr);
+        size_ = v.size_; v.size_ = 0;
+        head = v.head; v.head = -1;
+        tail = v.tail; v.tail = -1;
+        arr = v.arr; v.arr = NULL;
+    }
+    return *this;
+}
+template <class T>
+void my::deque<T>::insert(iterator it, std::initializer_list<T> l) {
+    size_t n = l.size();
+    this->resize(size()+n);
+    size_t first = it.ptr;
+    size_t last = first + n - 1;
+    size_t i;
+    for (i = size()-1; i > last; i--)
+        (*this)[i] = (*this)[i-n];
+    auto iter = l.begin();
+    for (i = first; i <= last; i++) {
+        (*this)[i] = *iter;
+        ++iter;
+    }
+}
+#endif
 
 template <class T>
 my::deque<T>::deque(const deque& dq): deque(dq.begin(), dq.end()) {}
@@ -252,12 +273,6 @@ template <class T>
 my::deque<T>& my::deque<T>::operator=(const deque& dq) {
     clear();
     this->copy(dq.begin(), dq.end());
-    return *this;
-}
-template <class T>
-my::deque<T>& my::deque<T>::operator=(std::initializer_list<T> l) {
-    clear();
-    this->copy(l.begin(), l.end());
     return *this;
 }
 template <class T>
@@ -339,9 +354,9 @@ void my::deque<T>::push_back(const T& val) {
 template <class T> class my::deque<T>::
 deque_iterator<T> my::deque<T>::insert(iterator it, const T& val, size_t n) {
     this->resize(size()+n);
-    int begin = it.ptr;
-    int end = begin + n - 1;
-    int i;
+    size_t begin = it.ptr;
+    size_t end = begin + n - 1;
+    size_t i;
     for (i = size()-1; i > end; i--)
         (*this)[i] = (*this)[i-n];
     for (; i >= begin; i--)
@@ -349,11 +364,11 @@ deque_iterator<T> my::deque<T>::insert(iterator it, const T& val, size_t n) {
     return iterator(this, begin);
 }
 template <class InputIterator>
-int distance(InputIterator first, InputIterator& last, std::random_access_iterator_tag) {
+size_t distance(InputIterator first, InputIterator& last, std::random_access_iterator_tag) {
     return last - first;
 }
 template <class InputIterator>
-int distance(InputIterator first, InputIterator& last, typename std::iterator_traits<InputIterator>::iterator_category) {
+size_t distance(InputIterator first, InputIterator& last, typename std::iterator_traits<InputIterator>::iterator_category) {
     int n = 0;
     for (; first != last; ++first)
         n++;
@@ -361,11 +376,11 @@ int distance(InputIterator first, InputIterator& last, typename std::iterator_tr
 }
 template <class T> template<class InputIterator>
 void my::deque<T>::insert(iterator it, InputIterator begin, InputIterator end) {
-    int n = distance(begin, end, typename std::iterator_traits<InputIterator>::iterator_category());
+    size_t n = distance(begin, end, typename std::iterator_traits<InputIterator>::iterator_category());
     this->resize(size()+n);
-    int first = it.ptr;
-    int last = first + n - 1;
-    int i;
+    size_t first = it.ptr;
+    size_t last = first + n - 1;
+    size_t i;
     for (i = size()-1; i > last; i--)
         (*this)[i] = (*this)[i-n];
     for (i = first; i <= last; i++) {
@@ -374,48 +389,33 @@ void my::deque<T>::insert(iterator it, InputIterator begin, InputIterator end) {
     }
 }
 template <class T>
-void my::deque<T>::insert(iterator it, std::initializer_list<T> l) {
-    int n = l.size();
-    this->resize(size()+n);
-    int first = it.ptr;
-    int last = first + n - 1;
-    int i;
-    for (i = size()-1; i > last; i--)
-        (*this)[i] = (*this)[i-n];
-    auto iter = l.begin();
-    for (i = first; i <= last; i++) {
-        (*this)[i] = *iter;
-        ++iter;
-    }
-}
-template <class T>
 void my::deque<T>::erase(iterator it) {
-    int size = this->size();
+    size_t size = this->size();
     if (size == 0)
         return;
-    int ptr = it.ptr;
-    for (int i = ptr; i < size-1; i++) {
+    size_t ptr = it.ptr;
+    for (size_t i = ptr; i < size-1; i++) {
         (*this)[i] = (*this)[i+1];
     }
     this->pop_back();
 }
 template <class T>
 void my::deque<T>::erase(iterator begin, iterator end) {
-    int size = this->size();
+    size_t size = this->size();
     if (size == 0)
         return;
-    int n = end.ptr - begin.ptr;
-    for (int i = begin.ptr; i < size-n; i++)
+    size_t n = end.ptr - begin.ptr;
+    for (size_t i = begin.ptr; i < size-n; i++)
         (*this)[i] = (*this)[i+n];
     this->resize(size-n);
 }
 template <class T>
 void my::deque<T>::eraseAll(const T& val) {
-    int size = this->size();
+    size_t size = this->size();
     if (size == 0)
         return;
-    int i = 0;
-    for (int j = 0; j < size; j++) {
+    size_t i = 0;
+    for (size_t j = 0; j < size; j++) {
         if ((*this)[j] != val)
             (*this)[i++] = (*this)[j];
     }
@@ -449,33 +449,30 @@ void my::deque<T>::pop_back() {
     else
         --tail; 
 }
-template <class T>
-size_t my::deque<T>::partition(size_t l, size_t h) {
-    T temp;
+template <class T> template <class C>
+size_t my::deque<T>::partition(size_t l, size_t h, const C& comp) {
     bool done = false;
     int midpoint = l + (h - l) / 2;
     T pivot = (*this)[midpoint];
     while (!done) {
-        while ((*this)[l] < pivot) ++l;
-        while (pivot < (*this)[h]) --h;
+        while (comp((*this)[l], pivot)) ++l;
+        while (comp(pivot, (*this)[h])) --h;
         if (l >= h)
             done = true;
         else {
-            temp = (*this)[l];
-            (*this)[l] = (*this)[h];
-            (*this)[h] = temp;
+            my::swap((*this)[l], (*this)[h]);
             ++l; --h;
         }
     }
     return h;
 }
-template <class T>
-void my::deque<T>::quickSort(size_t l, size_t h) {
+template <class T> template <class C>
+void my::deque<T>::quickSort(size_t l, size_t h, const C& comp) {
     if (l >= h)
         return;
-    int m = partition(l, h);
-    quickSort(l, m);
-    quickSort(m + 1, h);
+    int m = partition(l, h, comp);
+    quickSort(l, m, comp);
+    quickSort(m + 1, h, comp);
 }
 template <class T> class my::deque<T>::
 deque_iterator<T> my::deque<T>::find(iterator begin, iterator end, const T& val) {
@@ -509,6 +506,46 @@ std::ostream& my::operator << (std::ostream& os, const my::deque<T>& dq) {
     }
     os << "]" << std::endl;
     return os;
+}
+template <class InputIterator1, class InputIterator2>
+  bool lexicographicalCompare (InputIterator1 first1, InputIterator1 last1,
+                                InputIterator2 first2, InputIterator2 last2) {
+    while (first1!=last1) {
+        if (first2==last2 || *first2<*first1) return false;
+        else if (*first1<*first2) return true;
+        ++first1; ++first2;
+    }
+    return (first2!=last2);
+}
+template <class T>
+bool operator==(my::deque<T>& d1, my::deque<T>& d2) {
+    if (d1.size() != d2.size())
+        return false;
+    for (int i = 0; i < d1.size(); i++) {
+        if (d1[i] != d2[i])
+            return false;
+    }
+    return true;
+}
+template <class T>
+bool operator!=(my::deque<T>& d1, my::deque<T>& d2) {
+    return !(d1 == d2);
+}
+template <class T>
+bool operator<(my::deque<T>& d1, my::deque<T>& d2) {
+    return(lexicographicalCompare(d1.begin(), d1.end(), d2.begin(), d2.end()));
+}
+template <class T>
+bool operator<=(my::deque<T>& d1, my::deque<T>& d2) {
+    return (d1 == d2 || d1 < d2);
+}
+template <class T>
+bool operator>(my::deque<T>& d1, my::deque<T>& d2) {
+    return !(d1 == d2 || d1 < d2);
+}
+template <class T>
+bool operator>=(my::deque<T>& d1, my::deque<T>& d2) {
+    return !(d1 < d2);
 }
 
 #endif
