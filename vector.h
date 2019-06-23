@@ -47,6 +47,7 @@ class my::vector {
         const vector* v;
     };
     typedef size_t size_type;
+    typedef T value_type;
     typedef vector_iterator<T> iterator;
     typedef vector_iterator<const T> const_iterator;
     typedef std::reverse_iterator<iterator> reverse_iterator;
