@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <cstdlib>
+#include "utilities.h"
 
 namespace my {
     template <class T> class vector;
@@ -50,15 +51,15 @@ class my::vector {
     typedef vector_iterator<const T> const_iterator;
     typedef std::reverse_iterator<iterator> reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
-    vector();
-    vector(size_t n, T val = T());
+
+    explicit vector();
+    explicit vector(size_t n);
+    explicit vector(size_t n, const T& val);
     template<class InputIterator>
     vector(InputIterator begin, InputIterator end);
-    vector(std::initializer_list<T> l);
     vector(const vector& vec);
     ~vector() {free(arr);}
     vector& operator=(const vector& vec);
-    vector& operator=(std::initializer_list<T> l);
     void assign(size_t n, const T& val);
     template<class InputIterator>
     void assign(InputIterator begin, InputIterator end);
@@ -74,25 +75,23 @@ class my::vector {
     iterator insert(iterator it, const T& val, size_t n = 1);
     template<class InputIterator>
     void insert(iterator it, InputIterator begin, InputIterator end);
-    void insert(iterator it, std::initializer_list<T> l);
-    template <class... Args>
-    iterator emplace(const_iterator it, Args&&... args)
-    {return insert(it, T(args...));}
-    template <class... Args>
-    void emplace_back(Args&&... args) {push_back(T(args...));}
     void erase(iterator it);
     void erase(iterator begin, iterator end);
-    void eraseAll(T val);
+    void eraseAll(const T& val);
     bool empty() const {return inUse == 0;}
     size_t size() const {return inUse;}
     size_t capacity() const {return allocated;}
-    void resize(size_t v, T val = T());
+    void resize(size_t v, const T& val);
+    void resize(size_t v) {resize(v, T());}
     void reserve(size_t v);
     void shrink_to_fit();
     void swap(vector& vec);
-    void sort() {quickSort(0, size()-1);}
+    void clear();
+    void sort() {quickSort(0, size()-1, my::less<T>());}
+    template <class C>
+    void sort(C compare) {quickSort(0, size()-1, compare);}
     iterator find(iterator begin, iterator end, const T& val) const;
-    iterator find_s(iterator begin, iterator end, const T& val) const;
+    iterator find_s(iterator begin, iterator end, const T& val) const;  //uses binary search
     iterator begin() const {return iterator(0, this);}
     iterator end() const {return iterator(inUse, this);}
     const_iterator cbegin() const {return const_iterator(0, this);}
@@ -104,16 +103,78 @@ class my::vector {
     const_reverse_iterator crend() const
     {return const_reverse_iterator(cbegin());}
 
+    #if __cplusplus >= 201103L
+    vector(std::initializer_list<T> l);
+    vector(vector&& v);
+    vector& operator=(std::initializer_list<T> l);
+    vector& operator=(vector&& v);
+    void insert(iterator it, std::initializer_list<T> l);
+    template <class... Args>
+    iterator emplace(const_iterator it, Args&&... args)
+    {return insert(it, T(args...));}
+    template <class... Args>
+    void emplace_back(Args&&... args) {push_back(T(args...));}
+    #endif
+
     private:
     T* arr;
     size_t inUse;
     size_t allocated;
 
     void growArray(size_t n);
-    void clear();
-    size_t partition(size_t l, size_t h);
-    void quickSort(size_t low, size_t high);
+    template <class C>
+    size_t partition(size_t l, size_t h, const C& comp);
+    template <class C>
+    void quickSort(size_t low, size_t high, const C& comp);
 };
+
+#if __cplusplus >= 201103L
+template <class T>
+my::vector<T>::vector(std::initializer_list<T> l): allocated(l.size()) {
+    arr = (T*)malloc(sizeof(T)*allocated);
+    auto it = l.begin();
+    for (size_t i = 0; i < allocated; ++i)
+        arr[i] = *it++;
+    inUse = allocated;
+}
+template <class T>
+my::vector<T>::vector(vector&& v) {
+    allocated = v.allocated; v.allocated = 0;
+    inUse = v.inuse; v.inUse = 0;
+    arr = v.arr; v.arr = NULL;
+}
+template <class T>
+my::vector<T>& my::vector<T>::operator=(vector&& v) {
+    if (this != &v) {
+        free(arr);
+        allocated = v.allocated; v.allocated = 0;
+        inUse = v.inuse; v.inUse = 0;
+        arr = v.arr; v.arr = NULL;
+    }
+    return *this;
+}
+template <class T>
+my::vector<T>& my::vector<T>::operator= (std::initializer_list<T> l) {
+    clear();
+    this->copy(l.begin(), l.end());
+    return *this;
+}
+template <class T>
+void my::vector<T>::insert(iterator it, std::initializer_list<T> l) {
+    int n = l.size();
+    int first = it - this->begin();
+    int last = first + n - 1;
+    this->resize(inUse+n);
+    int i;
+    for (i = inUse-1; i > last; i--)
+        arr[i] = arr[i-n];
+    auto iter = l.begin();
+    for (i = first; i <= last; i++) {
+        arr[i] = *iter;
+        ++iter;
+    }
+}
+#endif
 
 template <class T> template<class InputIterator>
 void my::vector<T>::copy(InputIterator begin, InputIterator end) {
@@ -126,22 +187,20 @@ template <class T>
 my::vector<T>::vector(): arr(NULL), inUse(0), allocated(0) {}
 
 template <class T>
-my::vector<T>::vector(size_t n, T val): inUse(n), allocated(n) {
+my::vector<T>::vector(size_t n): inUse(n), allocated(n) {
+    arr = (T*)malloc(sizeof(T)*allocated);
+    for (size_t i = 0; i < n; i++)
+        arr[i] = T();
+}
+template <class T>
+my::vector<T>::vector(size_t n, const T& val): inUse(n), allocated(n) {
     arr = (T*)malloc(sizeof(T)*allocated);
     for (size_t i = 0; i < n; i++)
         arr[i] = val;
 }
 template <class T> template<class InputIterator>
-my::vector<T>::vector(InputIterator begin, InputIterator end): vector() {
+my::vector<T>::vector(InputIterator begin, InputIterator end): arr(NULL), inUse(0), allocated(0) {
     this->copy(begin, end);
-}
-template <class T>
-my::vector<T>::vector(std::initializer_list<T> l): allocated(l.size()) {
-    arr = (T*)malloc(sizeof(T)*allocated);
-    auto it = l.begin();
-    for (size_t i = 0; i < allocated; ++i)
-        arr[i] = *it++;
-    inUse = allocated;
 }
 template <class T>
 my::vector<T>::vector(const vector& vec): allocated(vec.size()) {
@@ -155,12 +214,6 @@ template <class T>
 my::vector<T>& my::vector<T>::operator=(const vector& vec) {
     clear();
     this->copy(vec.begin(), vec.end());
-    return *this;
-}
-template <class T>
-my::vector<T>& my::vector<T>::operator= (std::initializer_list<T> l) {
-    clear();
-    this->copy(l.begin(), l.end());
     return *this;
 }
 template <class T>
@@ -220,7 +273,7 @@ void my::vector<T>::growArray(size_t n) {
     free(temp);
 }
 template <class T>
-void my::vector<T>::resize(size_t v, T val) {
+void my::vector<T>::resize(size_t v, const T& val) {
     size_t i(0);
     if (v < inUse) {
         T* temp = arr;
@@ -277,10 +330,10 @@ void my::vector<T>::clear() {
 }
 template <class T> class my::vector<T>::
 vector_iterator<T> my::vector<T>::insert(iterator it, const T& val, size_t n) {
-    int begin = it - this->begin();
-    int end = begin + n - 1;
+    size_t begin = it - this->begin();
+    size_t end = begin + n - 1;
     this->resize(inUse+n);
-    int i;
+    size_t i;
     for (i = inUse-1; i > end; i--)
         arr[i] = arr[i-n];
     for (; i >= begin; i--)
@@ -288,23 +341,23 @@ vector_iterator<T> my::vector<T>::insert(iterator it, const T& val, size_t n) {
     return iterator(arr+begin);
 }
 template <class InputIterator>
-int distance(InputIterator first, InputIterator& last, std::random_access_iterator_tag) {
+size_t distance(InputIterator first, InputIterator& last, std::random_access_iterator_tag) {
     return last - first;
 }
 template <class InputIterator>
-int distance(InputIterator first, InputIterator& last, typename std::iterator_traits<InputIterator>::iterator_category) {
-    int n = 0;
+size_t distance(InputIterator first, InputIterator& last, typename std::iterator_traits<InputIterator>::iterator_category) {
+    size_t n = 0;
     for (; first != last; ++first)
         n++;
     return n;
 }
 template <class T> template<class InputIterator>
 void my::vector<T>::insert(iterator it, InputIterator begin, InputIterator end) {
-    int n = distance(begin, end, typename std::iterator_traits<InputIterator>::iterator_category());
-    int first = it - this->begin();
-    int last = first + n - 1;
+    size_t n = distance(begin, end, typename std::iterator_traits<InputIterator>::iterator_category());
+    size_t first = it - this->begin();
+    size_t last = first + n - 1;
     this->resize(inUse+n);
-    int i;
+    size_t i;
     for (i = inUse-1; i > last; i--)
         arr[i] = arr[i-n];
     for (i = first; i <= last; i++) {
@@ -313,25 +366,10 @@ void my::vector<T>::insert(iterator it, InputIterator begin, InputIterator end) 
     }
 }
 template <class T>
-void my::vector<T>::insert(iterator it, std::initializer_list<T> l) {
-    int n = l.size();
-    int first = it - this->begin();
-    int last = first + n - 1;
-    this->resize(inUse+n);
-    int i;
-    for (i = inUse-1; i > last; i--)
-        arr[i] = arr[i-n];
-    auto iter = l.begin();
-    for (i = first; i <= last; i++) {
-        arr[i] = *iter;
-        ++iter;
-    }
-}
-template <class T>
 void my::vector<T>::erase(iterator it) {
     if (inUse == 0)
         return;
-    for (int i = it - this->begin(); i < inUse-1; i++)
+    for (size_t i = it - this->begin(); i < inUse-1; i++)
         arr[i] = arr[i+1];
     this->pop_back();
 }
@@ -345,18 +383,18 @@ void my::vector<T>::erase(iterator begin, iterator end) {
     this->resize(inUse-n);
 }
 template <class T>
-void my::vector<T>::eraseAll(T val) {
+void my::vector<T>::eraseAll(const T& val) {
     if (inUse == 0)
         return;
-    int i = 0;
-    for (int j = 0; j < inUse; j++) {
+    size_t i = 0;
+    for (size_t j = 0; j < inUse; j++) {
         if (arr[j] != val)
             arr[i++] = arr[j];
     }
     this->resize(i);
 }
-template <class T>
-size_t my::vector<T>::partition(size_t l, size_t h) {
+template <class T> template <class C>
+size_t my::vector<T>::partition(size_t l, size_t h, const C& comp) {
     T temp;
     bool done = false;
    
@@ -365,9 +403,9 @@ size_t my::vector<T>::partition(size_t l, size_t h) {
     T pivot = arr[midpoint];
     while (!done) {
         // Increment l while numbers[l] < pivot
-        while (arr[l] < pivot) ++l;
+        while (comp(arr[l], pivot)) ++l;
         // Decrement h while pivot < numbers[h]
-        while (pivot < arr[h]) --h;
+        while (comp(pivot, arr[h])) --h;
         // If there are zero or one elements remaining, all numbers are partitioned. Return h
         if (l >= h)
             done = true;
@@ -381,18 +419,13 @@ size_t my::vector<T>::partition(size_t l, size_t h) {
     }
     return h;
 }
-template <class T>
-void my::vector<T>::quickSort(size_t l, size_t h) {
-    // Base case: If there are 1 or zero elements to sort, partition is already sorted
+template <class T> template <class C>
+void my::vector<T>::quickSort(size_t l, size_t h, const C& comp) {
     if (l >= h)
         return;
-    // Partition the data within the array. Value j returned
-    // from partitioning is location of last element in low partition.
-    int m = partition(l, h);
-
-    // Recursively sort low partition (l to m) and high partition (m + 1 to h)
-    quickSort(l, m);
-    quickSort(m + 1, h);
+    size_t m = partition(l, h, comp);
+    quickSort(l, m, comp);
+    quickSort(m + 1, h, comp);
 }
 template <class T> class my::vector<T>::
 vector_iterator<T> my::vector<T>::find(iterator begin, iterator end, const T& val) const {
