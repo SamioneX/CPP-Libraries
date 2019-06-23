@@ -1,5 +1,5 @@
-#ifndef _RBTREE_H_
-#define _RBTREE_H_
+#ifndef RBTREE_H
+#define RBTREE_H
 
 #include <iostream>
 #include "utilities.h"
