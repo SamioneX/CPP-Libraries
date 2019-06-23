@@ -5,7 +5,7 @@
 #include "utilities.h"
 
 namespace my {
-    enum Color {RED, BLACK, DBLACK};
+    enum Color {RED, BLACK};
     template <class T> struct treeNode;
     template <class T, class L = my::less<T>, class E = my::equals<T> > class RBTree;
     template <class T>
@@ -130,14 +130,16 @@ class my::RBTree {
         const_reverse_iterator& operator--() {this->hd = this->hd->next(); return *this;}
         const_reverse_iterator operator--(int) {const_reverse_iterator it(this->hd); --*this; return it;}
     };
-    RBTree(const L& less_comp = L(), const E& equal_comp = E());
-    RBTree(const RBTree& t);
+    explicit RBTree(const L& less_comp = L(), const E& equal_comp = E()); //empty constructor
+    RBTree(const RBTree& t);  //copy constructor
     template <class InputIterator>
-    RBTree(InputIterator first, InputIterator last);
+    RBTree(InputIterator first, InputIterator last);   //range constructor
     #if __cplusplus >= 201103L
+    RBTree(RBTree&& t);   //move constructor
     RBTree(std::initializer_list<T> l);
-    void insert (std::initializer_list<T> il);
-    RBTree& operator=(std::initializer_list<T> il);
+    void insert (std::initializer_list<T> l);
+    RBTree& operator=(std::initializer_list<T> l);
+    RBTree& operator=(RBTree&& t);
     template <class... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {return insert(T(args...));}
     #endif
@@ -163,10 +165,10 @@ class my::RBTree {
     iterator end() const { return iterator(NULL);}
     const_iterator cbegin() const {return const_iterator(first());}
     const_iterator cend() const { return const_iterator(NULL);}
-    reverse_iterator rbegin() const {return reverse_iterator(NULL);}
-    reverse_iterator rend() const { return reverse_iterator(last());}
-    const_reverse_iterator crbegin() const {return const_reverse_iterator(NULL);}
-    const_reverse_iterator crend() const { return const_reverse_iterator(last());}
+    reverse_iterator rbegin() const {return reverse_iterator(last());}
+    reverse_iterator rend() const { return reverse_iterator(NULL);}
+    const_reverse_iterator crbegin() const {return const_reverse_iterator(last());}
+    const_reverse_iterator crend() const { return const_reverse_iterator(NULL);}
 
     protected:
     void rotate_left(node*);
@@ -482,15 +484,20 @@ my::RBTree<T, L, E>::RBTree(const L& less_comp, const E& equal_comp) : root(NULL
     equals = equal_comp;
 }
 template <class T, class L, class E> template <class InputIterator>
-my::RBTree<T, L, E>::RBTree(InputIterator first, InputIterator last): RBTree(L(), E()) {
+my::RBTree<T, L, E>::RBTree(InputIterator first, InputIterator last): root(NULL), count(0) {
     insert(first, last);
 }
 template <class T, class L, class E>
-my::RBTree<T, L, E>::RBTree(const RBTree& t): RBTree(L(), E()) {
+my::RBTree<T, L, E>::RBTree(const RBTree& t): root(NULL), count(0) {
     copy_tree(root, t.root);
     count = t.count;
 }
 #if __cplusplus >= 201103L
+template <class T, class L, class E>
+my::RBTree<T, L, E>::RBTree(RBTree&& t): RBTree(L(), E()) {
+    root = t.root; t.root = NULL;
+    count = t.count; t.count = 0;
+}
 template <class T, class L, class E>
 my::RBTree<T, L, E>::RBTree(std::initializer_list<T> l): RBTree(L(), E()) {
     insert(l.begin(), l.end());
@@ -505,6 +512,15 @@ my::RBTree<T, L, E>& my::RBTree<T, L, E>::operator=(std::initializer_list<T> l) 
     insert(l.begin(), l.end());
     return *this;
 }
+template <class T, class L, class E> 
+my::RBTree<T, L, E>& my::RBTree<T, L, E>::operator=(RBTree&& t) {
+    if (this != &t) {
+        delete_tree(root);
+        root = t.root; t.root = NULL;
+        count = t.count; t.count = 0;
+    }
+    return *this;
+}
 #endif
 template <class T, class L, class E> 
 my::RBTree<T, L, E>& my::RBTree<T, L, E>::operator=(const RBTree& t) {
@@ -513,6 +529,7 @@ my::RBTree<T, L, E>& my::RBTree<T, L, E>::operator=(const RBTree& t) {
     count = t.count;
     return *this;
 }
+
 template <class T, class L, class E> 
 std::pair<class my::RBTree<T, L, E>::iterator, bool> my::RBTree<T, L, E>::insert(const T& val) {
     node *pt = new node(val);
