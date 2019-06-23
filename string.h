@@ -75,6 +75,7 @@ class my::string {
     public:
     static const size_t npos = -1;
     typedef size_t size_type;
+    typedef char value_type;
     typedef string_iterator<char> iterator;
     typedef string_iterator<const char> const_iterator;
     typedef std::reverse_iterator<iterator> reverse_iterator;
@@ -89,7 +90,6 @@ class my::string {
     ~string() {free(str);}
     template <class InputIterator>
     string (InputIterator first, InputIterator last);
-    string (std::initializer_list<char> l);
     string& operator= (const string& s) {clear(); insert(0, s); return *this;}
     string& operator= (const char* s) {clear(); insert(0, s); return *this;}
     int compare (const string& s) const {return compare(0, inUse, s, 0, s.inUse);}
@@ -122,7 +122,6 @@ class my::string {
     {int n = p - begin(); insert(n, 1, c); return iterator(n, this);}
     template <class InputIterator>
     void insert (iterator p, InputIterator first, InputIterator last);
-    void insert (iterator p, std::initializer_list<char> l) {insert(p, l.begin(), l.end());}
     string& erase (size_t pos = 0, size_t len = npos);
     iterator erase (iterator it) {return erase(it, it+1);}
     iterator erase (iterator first, iterator last);
@@ -144,8 +143,6 @@ class my::string {
     {replace(i1-begin(), i2-i1, n, c); return *this;}
     template <class InputIterator>
     string& replace (iterator i1, iterator i2, InputIterator first, InputIterator last);
-    string& replace (iterator i1, iterator i2, std::initializer_list<char> l)
-    {replace(i1, i2, l.begin(), l.end()); return *this;}
     size_t find (const string& s, size_t pos = 0) const {return find(s.str, pos, s.inUse);}
     size_t find (const char* s, size_t pos = 0) const {return find(s, pos, strlen(s));}
     size_t find (const char* s, size_t pos, size_t n) const;
@@ -181,7 +178,41 @@ class my::string {
     {return const_reverse_iterator(cbegin());}
     string substr (size_t pos = 0, size_t len = npos) const;
     void clear();
+
+    #if __cplusplus >= 201103L
+    string(string&& s);
+    string (std::initializer_list<char> l);
+    string& operator=(string&& s);
+    void insert (iterator p, std::initializer_list<char> l) {insert(p, l.begin(), l.end());}
+    string& replace (iterator i1, iterator i2, std::initializer_list<char> l)
+    {replace(i1, i2, l.begin(), l.end()); return *this;}
+
+    #endif
 };
+#if __cplusplus >= 201103L
+my::string::string(string&& s) {
+    inUse = s.inUse; s.inUse = 0;
+    allocated = s.allocated; s.allocated = 1;
+    str = s.str; s.str = (char*)malloc(1); s.str[0] = '\0';
+}
+my::string::string(std::initializer_list<char> l): inUse(l.size()) {
+    allocated = inUse+1;
+    str = (char*)malloc(allocated);
+    int i = 0;
+    for (auto &x : l)
+        str[i++] = x;
+    str[inUse] = '\0';
+}
+my::string& my::string::operator=(string&& s) {
+    if (this != &s) {
+        free(str);
+        inUse = s.inUse; s.inUse = 0;
+        allocated = s.allocated; s.allocated = 1;
+        str = s.str; s.str = (char*)malloc(1); s.str[0] = '\0';
+    }
+    return *this;
+}
+#endif
 my::string::string(): inUse(0), allocated(1) {
     str = (char*)malloc(1);
     str[0] = '\0';
@@ -244,14 +275,6 @@ my::string::string (InputIterator first, InputIterator last) {
     str = (char*)malloc(allocated);
     for (; first != last; ++first)
         str[n++] = *first;
-    str[inUse] = '\0';
-}
-my::string::string(std::initializer_list<char> l): inUse(l.size()) {
-    allocated = inUse+1;
-    str = (char*)malloc(allocated);
-    int i = 0;
-    for (auto &x : l)
-        str[i++] = x;
     str[inUse] = '\0';
 }
 int my::string::compare (size_t pos, size_t len, const string& s, size_t subpos, size_t sublen) const {
