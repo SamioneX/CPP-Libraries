@@ -1,5 +1,5 @@
-#ifndef _MAP_H_
-#define _MAP_H_
+#ifndef MAP_H
+#define MAP_H
 
 #include <iostream>
 #include <stdexcept>
@@ -131,14 +131,16 @@ class my::map {
         const_reverse_iterator& operator--() {this->hd = this->hd->next(); return *this;}
         const_reverse_iterator operator--(int) {const_reverse_iterator it(this->hd); --*this; return it;}
     };
-    map(const L& less_comp = L(), const E& equal_comp = E());
-    map(const map& t);
+    explicit map(const L& less_comp = L(), const E& equal_comp = E());  //default constructor
+    map(const map& t); //copy constructor
     template <class InputIterator>
-    map(InputIterator first, InputIterator last);
+    map(InputIterator first, InputIterator last);   //range constructor
     #if __cplusplus >= 201103L
-    map(std::initializer_list<value_type> l);
+    map(map&& m);    //move constructor
+    map(std::initializer_list<value_type> l);     //initializer_list constructor
     void insert (std::initializer_list<value_type> il);
     map& operator=(std::initializer_list<value_type> il);
+    map& operator=(map&& m);
     template <class... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {return insert(T(args...));}
     #endif
@@ -166,10 +168,10 @@ class my::map {
     iterator end() const { return iterator(NULL);}
     const_iterator cbegin() const {return const_iterator(first());}
     const_iterator cend() const { return const_iterator(NULL);}
-    reverse_iterator rbegin() const {return reverse_iterator(NULL);}
-    reverse_iterator rend() const { return reverse_iterator(last());}
-    const_reverse_iterator crbegin() const {return const_reverse_iterator(NULL);}
-    const_reverse_iterator crend() const { return const_reverse_iterator(last());}
+    reverse_iterator rbegin() const {return reverse_iterator(last());}
+    reverse_iterator rend() const { return reverse_iterator(NULL);}
+    const_reverse_iterator crbegin() const {return const_reverse_iterator(last());}
+    const_reverse_iterator crend() const { return const_reverse_iterator(NULL);}
 
     protected:
     void rotate_left(node*);
@@ -485,15 +487,20 @@ my::map<K, V, L, E>::map(const L& less_comp, const E& equal_comp) : root(NULL), 
     equals = equal_comp;
 }
 template <class K, class V, class L, class E> template <class InputIterator>
-my::map<K, V, L, E>::map(InputIterator first, InputIterator last): map(L(), E()) {
+my::map<K, V, L, E>::map(InputIterator first, InputIterator last): root(NULL), count(0) {
     insert(first, last);
 }
 template <class K, class V, class L, class E>
-my::map<K, V, L, E>::map(const map& t): map(L(), E()) {
+my::map<K, V, L, E>::map(const map& t): root(NULL), count(0) {
     copy_tree(root, t.root);
     count = t.count;
 }
 #if __cplusplus >= 201103L
+template <class K, class V, class L, class E>
+my::map<K, V, L, E>::map(map&& m): map(L(), E()) {
+    root = m.root; m.root = NULL;
+    count = m.count; m.count = 0;
+}
 template <class K, class V, class L, class E>
 my::map<K, V, L, E>::map(std::initializer_list<value_type> l): map(L(), E()) {
     insert(l.begin(), l.end());
@@ -508,6 +515,15 @@ my::map<K, V, L, E>& my::map<K, V, L, E>::operator=(std::initializer_list<value_
     insert(l.begin(), l.end());
     return *this;
 }
+template <class K, class V, class L, class E> 
+my::map<K, V, L, E>& my::map<K, V, L, E>::operator=(map&& m) {
+    if (this != &m) {
+        delete_tree(root);
+        root = m.root; m.root = NULL;
+        count = m.count; m.count = 0;
+    }
+    return *this;
+}
 #endif
 template <class K, class V, class L, class E> 
 my::map<K, V, L, E>& my::map<K, V, L, E>::operator=(const map& t) {
@@ -516,6 +532,7 @@ my::map<K, V, L, E>& my::map<K, V, L, E>::operator=(const map& t) {
     count = t.count;
     return *this;
 }
+
 template <class K, class V, class L, class E>
 V& my::map<K, V, L, E>::at(const K& key) {
     node* n = search(root, key);
