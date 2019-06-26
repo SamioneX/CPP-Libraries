@@ -1,26 +1,17 @@
 #ifndef RBTREE_H
 #define RBTREE_H
 
-#include <iostream>
-#include "utilities.h"
-
 namespace my {
     enum Color {RED, BLACK};
     template <class T> struct treeNode;
-    template <class T, class L = my::less<T>, class E = my::equals<T> > class RBTree;
-    template <class T>
-    struct print {
-        void operator()(const T& val) const {
-            std::cout << val << ' ';
-        }
-    };
+    template <class T, class C> class RBTree;
 }
 template <class T>
 struct my::treeNode {
     T data;
     Color color;
     treeNode *parent, *right, *left;
-    treeNode(): parent(NULL), right(NULL), left(NULL), color(RED) {}
+    treeNode(): right(NULL), left(NULL), color(RED) {}
     treeNode(const T& val): parent(NULL), right(NULL), left(NULL), color(RED), data(val) {}
     treeNode* grandparent() {
         if (this->parent == NULL) return NULL;
@@ -74,11 +65,13 @@ struct my::treeNode {
     }
 };
 
-template <class T, class L, class E>
+template <class T, class C>
 class my::RBTree {
     typedef treeNode<T> node;
+
     public:
     typedef T value_type;
+    typedef C key_compare;
     template <class U>
     class RBTree_iterator {
         friend class RBTree;
@@ -129,38 +122,28 @@ class my::RBTree {
         const_reverse_iterator operator++(int) {const_reverse_iterator it(this->hd); ++*this; return it;}
         const_reverse_iterator& operator--() {this->hd = this->hd->next(); return *this;}
         const_reverse_iterator operator--(int) {const_reverse_iterator it(this->hd); --*this; return it;}
-    };
-    explicit RBTree(const L& less_comp = L(), const E& equal_comp = E()); //empty constructor
+    }; 
+    explicit RBTree(const C& comp = C()); //empty constructor
     RBTree(const RBTree& t);  //copy constructor
-    template <class InputIterator>
-    RBTree(InputIterator first, InputIterator last);   //range constructor
     #if __cplusplus >= 201103L
     RBTree(RBTree&& t);   //move constructor
-    RBTree(std::initializer_list<T> l);
     void insert (std::initializer_list<T> l);
     RBTree& operator=(std::initializer_list<T> l);
     RBTree& operator=(RBTree&& t);
-    template <class... Args>
-    std::pair<iterator, bool> emplace(Args&&... args) {return insert(T(args...));}
     #endif
     ~RBTree() {delete_tree(root);}
     RBTree& operator=(const RBTree& t);
-    std::pair<iterator, bool> insert(const T& val);
     template <class InputIterator>
     void insert (InputIterator first, InputIterator last);
-    void erase(const T& val);
     void erase(const_iterator it);
     void erase(const_iterator first, const_iterator last);
     void clear() {delete_tree(root); root = NULL;}
-    size_t size() {return count;}
-    bool empty() {return count == 0;}
+    size_t size() {return size_;}
+    bool empty() {return size_ == 0;}
     template <class OutputIterator>
     void copy(OutputIterator first) {inorder_copy(root, first);}
-    iterator find(const T& val) {return iterator(search(root, val));}
-    template <class P>
-    void print(P func) {inorder_print(root, func);}
-    void print() {inorder_print(root, my::print<T>());}
     void swap(RBTree& t);
+    C key_comp() const {return compare;}
     iterator begin() const {return iterator(first());}
     iterator end() const { return iterator(NULL);}
     const_iterator cbegin() const {return const_iterator(first());}
@@ -174,8 +157,7 @@ class my::RBTree {
     void rotate_left(node*);
     void rotate_right(node*);
     void insert_repair(node*);
-    node* search(node* root, const T& key) const;
-    node* BSTInsert(node* root, node* pt, node*& s);
+    virtual void insert_help(node* pt) = 0;
     node* find_replacement(node* x) const;
     void replace_node(node* v, node* u);
     void delete_node(node* v);
@@ -194,14 +176,12 @@ class my::RBTree {
     template <class OutputIterator>
     void inorder_copy(node* n, OutputIterator& first) const;
 
-    private:
     node* root;
-    size_t count;
-    L less;
-    E equals;
+    size_t size_;
+    C compare;
 };
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::rotate_left(node* n) {
+template <class T, class C>
+void my::RBTree<T, C>::rotate_left(node* n) {
     node* nnew = n->right, *p = n->parent;
     n->right = nnew->left; 
     nnew->left = n;
@@ -218,8 +198,8 @@ void my::RBTree<T, L, E>::rotate_left(node* n) {
         root = nnew;
     nnew->parent = p;
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::rotate_right(node* n) {
+template <class T, class C>
+void my::RBTree<T, C>::rotate_right(node* n) {
     node* nnew = n->left, *p = n->parent;
     n->left = nnew->right;
     nnew->right = n;
@@ -236,34 +216,8 @@ void my::RBTree<T, L, E>::rotate_right(node* n) {
         root = nnew;
     nnew->parent = p;
 }
-template <class T, class L, class E>
-my::treeNode<T>* my::RBTree<T, L, E>::BSTInsert(node* root, node* n, node*& s) {
-    if (root == NULL) 
-       return n;
-    if (equals(n->data, root->data)) {
-        s = root;
-        return root;
-    }
-    else if (less (n->data, root->data)) {
-        root->left  = BSTInsert(root->left, n, s); 
-        root->left->parent = root;
-    }
-    else { 
-        root->right = BSTInsert(root->right, n, s);
-        root->right->parent = root; 
-    }
-    return root;
-}
-template <class T, class L, class E>
-my::treeNode<T>* my::RBTree<T, L, E>::search(node* root, const T& key) const{
-    if (root == NULL || equals(root->data, key))
-        return root;
-    if (less(key, root->data))
-        return search(root->left, key);
-    return search(root->right, key);
-}
-template <class T, class L, class E>
-my::treeNode<T>* my::RBTree<T, L, E>::find_replacement(node* x) const {
+template <class T, class C>
+my::treeNode<T>* my::RBTree<T, C>::find_replacement(node* x) const {
     if (x->left != NULL and x->right != NULL) {
         x = x->right;
         while (x->left != NULL)
@@ -275,8 +229,8 @@ my::treeNode<T>* my::RBTree<T, L, E>::find_replacement(node* x) const {
     else
         return x->left;
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::replace_node(node *v, node *u) {
+template <class T, class C>
+void my::RBTree<T, C>::replace_node(node *v, node *u) {
     if (v->parent != NULL) {
         if (v == v->parent->left)
             v->parent->left = u;
@@ -287,13 +241,13 @@ void my::RBTree<T, L, E>::replace_node(node *v, node *u) {
         root = u;
     if (u != NULL) u->parent = v->parent;
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::delete_node(node* v) {
+template <class T, class C>
+void my::RBTree<T, C>::delete_node(node* v) {
     node* u = find_replacement(v);
     /*---has two non-leaf children: swap u with v---*/
-    //Easier to just swap the values, but we have to account for iterators
+    //Easier to just swap the values, but we have to acsize_ for iterators
     if (v->left != NULL and v->right != NULL) {
-        my::swap(u->color, v->color);
+        Color c = v->color; v->color = u->color; u->color = c;
         node* t_parent = (u->parent == v)? u: u->parent;
         node* t_right = u->right;
         bool isleft = u == u->parent->left;
@@ -326,13 +280,13 @@ void my::RBTree<T, L, E>::delete_node(node* v) {
     replace_node(v, u);
     delete v;
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::delete_case1(node *n) {
+template <class T, class C>
+void my::RBTree<T, C>::delete_case1(node *n) {
     if (n->parent != NULL)
         delete_case2(n);
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::delete_case2(node *n) {
+template <class T, class C>
+void my::RBTree<T, C>::delete_case2(node *n) {
     node* s = n->sibling();
     if (s->color == RED) {
         n->parent->color = RED;
@@ -344,8 +298,8 @@ void my::RBTree<T, L, E>::delete_case2(node *n) {
     }
     delete_case3(n);
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::delete_case3(node *n) {
+template <class T, class C>
+void my::RBTree<T, C>::delete_case3(node *n) {
     node* s = n->sibling();
     if ((s->parent->color == BLACK) && (s->color == BLACK) && !s->has_red_child()) {
         s->color = RED;
@@ -354,8 +308,8 @@ void my::RBTree<T, L, E>::delete_case3(node *n) {
     else
         delete_case4(n);
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::delete_case4(node *n) {
+template <class T, class C>
+void my::RBTree<T, C>::delete_case4(node *n) {
     node* s = n->sibling();
     if ((n->parent->color == RED) && (s->color == BLACK) && !s->has_red_child()) {
         s->color = RED;
@@ -364,8 +318,8 @@ void my::RBTree<T, L, E>::delete_case4(node *n) {
     else
         delete_case5(n);
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::delete_case5(node *n) {
+template <class T, class C>
+void my::RBTree<T, C>::delete_case5(node *n) {
     node* s = n->sibling();
     if ((n == n->parent->left) && (s->right == NULL || s->right->color == BLACK)) {
         s->color = RED;
@@ -379,8 +333,8 @@ void my::RBTree<T, L, E>::delete_case5(node *n) {
     }
     delete_case6(n);
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::delete_case6(node *n) {
+template <class T, class C>
+void my::RBTree<T, C>::delete_case6(node *n) {
     node* s = n->sibling();
 
     s->color = n->parent->color;
@@ -395,8 +349,8 @@ void my::RBTree<T, L, E>::delete_case6(node *n) {
         rotate_right(n->parent);
     }
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::insert_repair(node* x) {
+template <class T, class C>
+void my::RBTree<T, C>::insert_repair(node* x) {
     if (x->parent == NULL) {
         x->color = BLACK;
         return;
@@ -428,8 +382,8 @@ void my::RBTree<T, L, E>::insert_repair(node* x) {
     p->color = BLACK;
     g->color = RED;
 }
-template <class T, class L, class E>
-my::treeNode<T>* my::RBTree<T, L, E>::first() const {
+template <class T, class C>
+my::treeNode<T>* my::RBTree<T, C>::first() const {
     node* temp = root;
     if (temp != NULL) {
         while (temp->left != NULL)
@@ -437,8 +391,8 @@ my::treeNode<T>* my::RBTree<T, L, E>::first() const {
     }
     return temp;
 }
-template <class T, class L, class E>
-my::treeNode<T>* my::RBTree<T, L, E>::last() const {
+template <class T, class C>
+my::treeNode<T>* my::RBTree<T, C>::last() const {
     node* temp = root;
     if (temp != NULL) {
         while (temp->right != NULL)
@@ -446,15 +400,15 @@ my::treeNode<T>* my::RBTree<T, L, E>::last() const {
     }
     return temp;
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::delete_tree(node *n) {
+template <class T, class C>
+void my::RBTree<T, C>::delete_tree(node *n) {
     if (n == NULL) return;
     delete_tree(n->left);
     delete_tree(n->right);
     delete n;
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::copy_tree(node* &n, node* p, node*np) {
+template <class T, class C>
+void my::RBTree<T, C>::copy_tree(node* &n, node* p, node*np) {
     if (p == NULL)
         return;
     n = new node(p->data);
@@ -462,109 +416,77 @@ void my::RBTree<T, L, E>::copy_tree(node* &n, node* p, node*np) {
     copy_tree(n->left, p->left, n);
     copy_tree(n->right, p->right, n);
 }
-template <class T, class L, class E> template <class P>
-void my::RBTree<T, L, E>::inorder_print(node* root, const P& func) const {
+template <class T, class C> template <class P>
+void my::RBTree<T, C>::inorder_print(node* root, const P& func) const {
     if (root != NULL) {
         inorder_print(root->left, func);
         func(root->data);
         inorder_print(root->right, func);
     }
 }
-template <class T, class L, class E> template <class OutputIterator>
-void my::RBTree<T, L, E>::inorder_copy(node* n, OutputIterator& first) const {
+template <class T, class C> template <class OutputIterator>
+void my::RBTree<T, C>::inorder_copy(node* n, OutputIterator& first) const {
     if (n == NULL)
         return;
     inorder_copy(n->left, first);
     *first = n->data; ++first;
     inorder_copy(n->right, first);
 }
-template <class T, class L, class E>
-my::RBTree<T, L, E>::RBTree(const L& less_comp, const E& equal_comp) : root(NULL), count(0) {
-    less = less_comp;
-    equals = equal_comp;
-}
-template <class T, class L, class E> template <class InputIterator>
-my::RBTree<T, L, E>::RBTree(InputIterator first, InputIterator last): root(NULL), count(0) {
-    insert(first, last);
-}
-template <class T, class L, class E>
-my::RBTree<T, L, E>::RBTree(const RBTree& t): root(NULL), count(0) {
+template <class T, class C>
+my::RBTree<T, C>::RBTree(const C& comp): root(NULL), size_(0), compare(comp) {}
+
+template <class T, class C>
+my::RBTree<T, C>::RBTree(const RBTree& t): root(NULL), size_(0), compare(t.compare) {
     copy_tree(root, t.root);
-    count = t.count;
+    size_ = t.size_;
 }
 #if __cplusplus >= 201103L
-template <class T, class L, class E>
-my::RBTree<T, L, E>::RBTree(RBTree&& t): RBTree(L(), E()) {
+template <class T, class C>
+my::RBTree<T, C>::RBTree(RBTree&& t): compare(t.compare) {
     root = t.root; t.root = NULL;
-    count = t.count; t.count = 0;
+    size_ = t.size_; t.size_ = 0;
 }
-template <class T, class L, class E>
-my::RBTree<T, L, E>::RBTree(std::initializer_list<T> l): RBTree(L(), E()) {
+template <class T, class C>
+void my::RBTree<T, C>::insert(std::initializer_list<T> l) {
     insert(l.begin(), l.end());
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::insert(std::initializer_list<T> l) {
-    insert(l.begin(), l.end());
-}
-template <class T, class L, class E>
-my::RBTree<T, L, E>& my::RBTree<T, L, E>::operator=(std::initializer_list<T> l) {
+template <class T, class C>
+my::RBTree<T, C>& my::RBTree<T, C>::operator=(std::initializer_list<T> l) {
     clear();
     insert(l.begin(), l.end());
     return *this;
 }
-template <class T, class L, class E> 
-my::RBTree<T, L, E>& my::RBTree<T, L, E>::operator=(RBTree&& t) {
+template <class T, class C> 
+my::RBTree<T, C>& my::RBTree<T, C>::operator=(RBTree&& t) {
     if (this != &t) {
         delete_tree(root);
         root = t.root; t.root = NULL;
-        count = t.count; t.count = 0;
+        size_ = t.size_; t.size_ = 0;
     }
     return *this;
 }
 #endif
-template <class T, class L, class E> 
-my::RBTree<T, L, E>& my::RBTree<T, L, E>::operator=(const RBTree& t) {
+template <class T, class C> 
+my::RBTree<T, C>& my::RBTree<T, C>::operator=(const RBTree& t) {
     clear();
     copy_tree(root, t.root);
-    count = t.count;
+    size_ = t.size_;
     return *this;
 }
-
-template <class T, class L, class E> 
-std::pair<class my::RBTree<T, L, E>::iterator, bool> my::RBTree<T, L, E>::insert(const T& val) {
-    node *pt = new node(val);
-    node* s = NULL;
-    root = BSTInsert(root, pt, s);
-    if (s == NULL) {
-        insert_repair(pt);
-        ++count;
-        return std::pair<iterator, bool>(iterator(pt), true);
-    }
-    delete pt;
-    return std::pair<iterator, bool>(iterator(s), false);
-}
-template <class T, class L, class E> template <class InputIterator>
-void my::RBTree<T, L, E>::insert(InputIterator first, InputIterator last) {
+template <class T, class C> template <class InputIterator>
+void my::RBTree<T, C>::insert(InputIterator first, InputIterator last) {
     for (; first != last; ++first)
-        insert(*first);
+        insert_help(new node(*first));
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::erase(const T& val) {
-    node* n = search(root, val);
-    if (n == NULL)
-        return;
-    delete_node(n);
-    --count;
-}
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::erase(const_iterator it) {
+template <class T, class C>
+void my::RBTree<T, C>::erase(const_iterator it) {
     if (root == NULL || it.hd == NULL)
         return;
     delete_node(it.hd);
-    --count;
+    --size_;
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::erase(const_iterator first, const_iterator last) {
+template <class T, class C>
+void my::RBTree<T, C>::erase(const_iterator first, const_iterator last) {
     if (root == NULL || first.hd == NULL)
         return;
     node* temp;
@@ -572,13 +494,13 @@ void my::RBTree<T, L, E>::erase(const_iterator first, const_iterator last) {
         temp = first.hd;
         ++first;
         delete_node(temp);
-        --count;
+        --size_;
     }
 }
-template <class T, class L, class E>
-void my::RBTree<T, L, E>::swap(RBTree& x) {
+template <class T, class C>
+void my::RBTree<T, C>::swap(RBTree& x) {
     node* t_root = root; root = x.root; x.root = t_root;
-    size_t t_count = count; count = x.count; x.count = t_count;
+    size_t t_size_ = size_; size_ = x.size_; x.size_ = t_size_;
 }
 
 #endif
