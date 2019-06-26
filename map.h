@@ -30,6 +30,28 @@ namespace my {
             else
                 return root;
         }
+        node* doupper(node* n, const K& key) const {
+            if (n == NULL)
+                return n;
+            if (this->compare(n->data.first, key))
+                return doupper(n->right, key);
+            if (this->compare(key, n->data.first)) {
+                node* temp = doupper(n->left, key);
+                return (temp == NULL)? n: temp;
+            }
+            return doupper(n->right, key);
+        }
+        node* dolower(node* n, const K& key) const {
+            if (n == NULL)
+                return n;
+            if (this->compare(n->data.first, key))
+                return dolower(n->right, key);
+            if (this->compare(key, n->data.first)) {
+                node* temp = dolower(n->left, key);
+                return (temp == NULL)? n: temp;
+            }
+            return n;
+        }
         public:
         using T::erase;
         class value_compare {
@@ -57,6 +79,11 @@ namespace my {
         template <class P>
         void print(P func) {this->inorder_print(this->root, func);}
         void print() {this->inorder_print(this->root, my::print<K, V>());}
+        iterator lower_bound(const K& key) const {return iterator(dolower(this->root, key));}
+        iterator upper_bound(const K& key) const {return iterator(doupper(this->root, key));}
+        std::pair<iterator, iterator> equal_range(const K& key) const {
+            return std::pair<iterator, iterator>(lower_bound(), upper_bound());
+        }
     };
     template <class K, class V, class C = less<const K> >
     class map: public mapClass<K, V, C> {
@@ -95,17 +122,21 @@ namespace my {
             return std::pair<iterator, bool>(iterator(s), false);
         }
         V& at(const K& key) {
-            node* n = search(this->root, key);
+            node* n = this->search(this->root, key);
             if (n == NULL)
                 throw std::out_of_range("my::map::range_check. Key not found\n");
             return n->data.second;
         }
         V& operator[](const K& key) {
-            node* n = search(this->root, key, this->compare);
+            node* n = this->search(this->root, key);
             if (n == NULL) {
                 return insert(value_type(key, V())).first->second;
             }
             return n->data.second;
+        }
+        size_t count(const K& key) {
+            if (this->search(this->root, key) == NULL) return 0;
+            return 1;
         }
         protected:
         node* BSTInsert(node* root, node* n, node*& s) {
@@ -165,6 +196,7 @@ namespace my {
             ++this->size_;
             return iterator(pt);
         }
+        size_t count(const K& key) {size_t i(0); count_helper(this->root, key, i); return i;}
         
         protected:
         node* BSTInsert(node* root, node* n) {
@@ -184,6 +216,19 @@ namespace my {
             this->root = BSTInsert(this->root, pt);
             this->insert_repair(pt);
             ++this->size_;
+        }
+        void count_helper(node* n, const K& key, size_t& i) {
+            if (n == NULL)
+                return;
+            if (this->compare(n->data.first, key))
+                count_helper(n->right, key, i);
+            else if (this->compare(key, n->data.first))
+                count_helper(n->left, key, i);
+            else {
+                ++i;
+                count_helper(n->left, key, i);
+                count_helper(n->right, key, i);
+            }
         }
     };
 }
