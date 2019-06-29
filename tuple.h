@@ -349,9 +349,18 @@ namespace my {
     constexpr bool operator>=(const tuple<Ts...>& t, const tuple<Us...>& u) {return !(t < u);}
 
     /*--------------------------other tuple functions------------------------*/
+    template<typename Tuple>
+    struct strip_tuple {
+        typedef typename std::remove_cv <typename std::remove_reference<Tuple>::type>::type type;
+    };
+    template<typename Tuple>
+    struct decay_and_strip {
+        typedef typename strip_tuple<typename std::decay<Tuple>::type>::type type;
+    };
+
     template<typename... Ts>
-    constexpr tuple<typename std::remove_cv<Ts>::type...> make_tuple(Ts&&... args) {
-        return tuple<typename std::remove_cv<Ts>::type...>(std::forward<Ts>(args)...);
+    constexpr tuple<typename decay_and_strip<Ts>::type...> make_tuple(Ts&&... args) {
+        return tuple<typename decay_and_strip<Ts>::type...>(std::forward<Ts>(args)...);
     }
     template<typename... Ts> constexpr tuple<Ts&&...> forward_as_tuple(Ts&&... args) {
         return tuple<Ts&&...>(std::forward<Ts>(args)...);
@@ -360,10 +369,6 @@ namespace my {
         return tuple<Ts&...>(args...);
     }
     /*-------------------------------tuple_cat---------------------------*/
-    template<typename Tuple>
-    struct strip_tuple {
-        typedef typename std::remove_cv <typename std::remove_reference<Tuple>::type>::type type;
-    };
 
     // Combines several tuples into a single one.
     template<typename...>
