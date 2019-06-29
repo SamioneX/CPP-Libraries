@@ -388,7 +388,7 @@ namespace my {
         typedef typename combine_tuples<tuple<T1s..., T2s...>, Rem...>::type type;
     };
 
-    //return a the type of a tuple containing all elements in each of the tuples being concatenated
+    //returns a the type of a tuple containing all elements in each of the tuples being concatenated
     template<typename... Tpls>
     struct tuple_cat_result {
         typedef typename combine_tuples <typename strip_tuple<Tpls>::type...>::type type;
@@ -408,7 +408,8 @@ namespace my {
     struct cat_index_sequence<i, index_sequence<indices...>>
     : index_sequence<indices..., i> {};
 
-    //recursive metafunction to make the indices
+    //recursive metafunction to make the indices. Recurse till N == 1 (i.e index_sequence<0>) 
+    //and then calls cat_index_sequence recursively, which appends, 1, 2, ..., N-1 to the index_sequence
     template <size_t N>
     struct make_index_sequence
     : cat_index_sequence<N-1, typename make_index_sequence<N-1>::type>::type {};
@@ -435,10 +436,11 @@ namespace my {
 
     // This performs the actual concatenation. When cat is called the first time,
     // sizeof...(us) is 0, when it's called for next, "us" becomes the elements in the first tuple
-    // obtained through get. Base case is reached when there are no more tuples in the parameter list.
+    // obtained through get. Base case is reached when there are no more tuples in the arguments list.
     template<typename Ret, typename indices, typename... Tpls>
     struct tuple_concater;
 
+    //specialization:
     template<typename Ret, size_t... indices, typename Tp, typename... Tpls>
     struct tuple_concater<Ret, index_sequence<indices...>, Tp, Tpls...> {
         template<typename... Us>
