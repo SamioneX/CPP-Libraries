@@ -432,7 +432,7 @@ vector_iterator<T> my::vector<T>::find(iterator begin, iterator end, const T& va
         if (arr[start] == val)
             break;
     }
-    iterator it(arr+start);
+    iterator it(arr+start, this);
     return it;
 }
 template <class T> class my::vector<T>::
@@ -440,13 +440,13 @@ vector_iterator<T> my::vector<T>::find_s(iterator begin, iterator end, const T& 
     size_t mid, low(begin - this->begin()), high((end - this->begin())- 1);
 
     while (high >= low) {
-        mid = (high + low) / 2;
-        if (arr[mid] < val && val < arr[mid+1])
-            return mid;
-        else if (arr[mid] < val)
+        mid = low + (high - low) / 2;
+        if (arr[mid] < val)
             low = mid + 1;
-        else
+        else if (val < arr[mid])
             high = mid - 1;
+        else
+            return iterator(mid, this);
     }
     return end; // not found
 }
