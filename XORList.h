@@ -51,10 +51,10 @@ class XORList {
             list_iterator operator--(int) {
                 list_iterator it(hd, prev, next); ++*this; return it;
             }
-            bool operator==(const list_iterator& it) {return hd == it.hd;}
-            bool operator!=(const list_iterator& it) {return hd != it.hd;}
-            reference operator*() {return hd->data;}
-            pointer operator->() { return &(hd->data);}
+            bool operator==(const list_iterator& it) const {return hd == it.hd;}
+            bool operator!=(const list_iterator& it) const {return hd != it.hd;}
+            reference operator*() const {return hd->data;}
+            pointer operator->() const { return &(hd->data);}
         protected:
             Node* hd;
             Node* prev;
@@ -167,12 +167,12 @@ class XORList {
         }
         --length;
     }
-    T& back() {
+    T& back() const {
         if (length == 0)
             throw std::out_of_range("In XORList::range_check. Size is 0");
         return tail->data;
     }
-    T& front() {
+    T& front() const {
         if (length == 0)
             throw std::out_of_range("In XORList::range_check. Size is 0");
         return head->data;
@@ -187,6 +187,10 @@ class XORList {
         }
         length = 0;
     }
+    bool empty() const {return length == 0;}
+    
+    size_t size() const {return length;}
+    
     iterator begin() const {return iterator(head, NULL, head->npx);}
     iterator end() const {return iterator(NULL, tail, NULL);}
     const_iterator cbegin() const {return const_iterator(head, NULL, head->npx);}
