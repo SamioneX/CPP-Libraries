@@ -4,6 +4,7 @@
 #include <iostream>
 #include <type_traits>
 #include <cstring>
+#include <optional>
 #include <atomic>
 #if __has_include(<string_view>)
 #include <string_view>
@@ -11,7 +12,7 @@
 
 
 /*
- * This is a basic implementation for a null-terminated immutable reference counted string.
+ * This is a basic template for a null-terminated immutable reference counted string.
  * We assume that any char array is a string literal. Unfortunately C++ does not differentiate this.
  * Small strings and string literals are never dynamically allocated.
  * Only large strings obtained from operations like concatenation or strings from other sources like std::string are heap allocated.
@@ -74,6 +75,17 @@ namespace so {
         }
     };
 
+    /* Valid String Patterns:
+     * For an empty string: empty.count_and_flags == 0, small.str[0] == 0 (the null byte). small.str[1..MAX_SMALL_STRING] can be anything.
+     * For a small string: small.dummy == 0 and small.count != 0, small.str can be anything.
+     * For a large non-rc string: large.isLarge == 1, large.rc == 0, count and (str|ptr) can be anything.
+     * For a rc string: large.isLarge == 1, large.rc == 1, count and (str|ptr) can be anything.
+     *
+     * For optimization purposes, we do not always zero out small.str[1..MAX_SMALL_STRING]. But one could do this.
+     *
+     * A string whose empty.count_and_flags == 0 and small.str[0] != 0 is not a valid string.
+     * This could be used to implement an optional string by giving small.str[0] a non-zero value.
+     */
     class IString {
         static constexpr size_t N = sizeof(size_t);
         static constexpr size_t MAX_SMALL_STRING = 2*N-1;
@@ -97,15 +109,25 @@ namespace so {
             size_t isLarge : 1;
             size_t isRc : 1;
         };
+
         struct Empty {
+            char dummy[MAX_SMALL_STRING];
+            uint8_t count_and_flags;
+        };
+
+        /* We use this for fast initialization an empty list to avoid any bit shifting */
+        struct EmptyInit {
             size_t dummy1;
             size_t dummy2;
         };
+
         union {
             SmallString small;
             LargeString large;
             Empty empty;
+            EmptyInit emptyInit;
         };
+
 
     public:
         static constexpr size_t MAX_SIZE = size_t(1) << COUNT_LENGTH;
@@ -113,11 +135,11 @@ namespace so {
         typedef std::reverse_iterator<iterator> reverse_iterator;
 
         IString() {
-            empty = {0, 0};
+            emptyInit = {0, 0};
         }
 
         IString(const char(&)[1]) {
-            empty = {0, 0};
+            emptyInit = {0, 0};
         }
 
         template<size_t P, ENABLE_IF(P > 1 && P <= MAX_SMALL_STRING)>
@@ -180,16 +202,14 @@ namespace so {
         }
 
 #undef RC_SETUP
-      
 #define COPY_ASSIGN \
         large = other.large;    \
         if (other.large.isRc) { \
             ++large.ptr->ref_count; \
         }
-      
 #define MOVE_ASSIGN \
         large = other.large;    \
-        other.empty = {0, 0};
+        emptyInit = {0, 0};
 
         IString(const IString& other) {
             COPY_ASSIGN
@@ -279,7 +299,7 @@ namespace so {
         }
 
         [[nodiscard]] bool isEmpty() const {
-            return !(large.isLarge? large.count : small.count);
+            return empty.count_and_flags == 0;
         }
 
         [[nodiscard]] reverse_iterator rbegin() const {
@@ -288,6 +308,21 @@ namespace so {
 
         [[nodiscard]] reverse_iterator rend() const {
             return reverse_iterator(this->begin());
+        }
+
+        void drop_and_invalidate() {
+            this->~IString();
+            empty.count_and_flags = 0;
+            small.str[0] = 1;
+        }
+
+        void invalidate() {
+            empty.count_and_flags = 0;
+            small.str[0] = 1;
+        }
+
+        [[nodiscard]] bool isValid() const {
+            return empty.count_and_flags != 0 || small.str[0] == 0;
         }
 
         friend std::ostream &operator<<(std::ostream &os, const IString &iString) {
