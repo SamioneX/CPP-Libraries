@@ -52,7 +52,6 @@ namespace so {
         template<class T, ENABLE_IF(!detail::is_string_literal<T>::value &&
                                     std::is_same_v<const char*, T> || std::is_same_v<char*, T>)>
         Slice(T s) {
-            std::cout << "using strlen\n";
             str = (const char*) s;
             len = strlen((const char*) s);
         }
@@ -181,11 +180,13 @@ namespace so {
         }
 
 #undef RC_SETUP
+      
 #define COPY_ASSIGN \
         large = other.large;    \
         if (other.large.isRc) { \
             ++large.ptr->ref_count; \
         }
+      
 #define MOVE_ASSIGN \
         large = other.large;    \
         other.empty = {0, 0};
