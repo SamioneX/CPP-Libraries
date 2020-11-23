@@ -7,7 +7,8 @@ using namespace so;
 #define print(...) cout << #__VA_ARGS__ ": " << (__VA_ARGS__) << endl
 #define demacate() cout << "------------------------------------------------------------\n"
 #define print_str(s) \
-    print(s);         \
+    print(s);        \
+    print(s.isValid()); \
     print(s.isEmpty()); \
     print(s.isHeapAllocated()); \
     print(s.length());  \
@@ -25,7 +26,7 @@ int main() {
     IString s0_1 = "";
     print_str(s0_1)
 
-    IString s1 = "hello";
+    IString s1 = "John";
     print_str(s1)
 
     IString s2 = "abracadabra abracadabra abracadabra";
@@ -37,10 +38,13 @@ int main() {
     auto s3 = s1 + s2;
     print_str(s3)
 
-    auto s4 = IString("hello ", "I'm "s, "here with "sv, s2);
+    auto s4 = IString("hello ", "I'm "s, "here with "sv, s1);
     print_str(s4)
 
     IString s5 = "world"sv;
+    print_str(s5)
+
+    s5.drop_and_invalidate();
     print_str(s5)
 
     return 0;
