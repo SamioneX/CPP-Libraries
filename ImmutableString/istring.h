@@ -11,7 +11,7 @@
 
 
 /*
- * This is a basic template for a null-terminated immutable reference counted string.
+ * This is a basic implementation for a null-terminated immutable reference counted string.
  * We assume that any char array is a string literal. Unfortunately C++ does not differentiate this.
  * Small strings and string literals are never dynamically allocated.
  * Only large strings obtained from operations like concatenation or strings from other sources like std::string are heap allocated.
