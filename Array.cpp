@@ -84,6 +84,7 @@ std::ostream& operator<<(std::ostream& os, const Vector<T, N>& vec) {
 template <class U, class... Rest>
 Vector(U&&, Rest&&...) -> Vector<std::common_type_t<U, Rest...>, 1 + sizeof...(Rest)>;
 
+
 template<class T, size_t N>
 __declspec(noinline) T sum(const Vector<T, N>& vec)  {
     T result = 0;
@@ -92,6 +93,12 @@ __declspec(noinline) T sum(const Vector<T, N>& vec)  {
     }
     return result;
 }
+
+template<class T, size_t D>
+class AbstractArray {};
+
+template<class T, size_t I, size_t... Is>
+class Array : Vector<T, (I * ... * Is)>, AbstractArray<T, 1 + sizeof...(Is)> {};
 
 int main() {
     auto v = Vector(1, 2, 3, 4, 5);
